@@ -1,13 +1,13 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "C:\\Users\\robin\\Desktop\\4. Semester\\Pruefungen\\Netzwerkpr\u00FCfung\\Netzwerkpruefung\\",
+  "WorkspaceRootPath": "C:\\Users\\robin\\Desktop\\4. Semester\\Pruefungen\\PR340_Netzwerkpr\u00FCfung\\PR340-Keanu-Robin\\Netzwerkpruefung\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{BA2B56CF-CACE-4868-A48C-6CAADD9C5A32}|Netzwerkpruefung.vcxproj|C:\\Users\\robin\\Desktop\\4. Semester\\Pruefungen\\Netzwerkpr\u00FCfung\\Netzwerkpruefung\\Server.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "AbsoluteMoniker": "D:0:0:{BA2B56CF-CACE-4868-A48C-6CAADD9C5A32}|Netzwerkpruefung.vcxproj|C:\\Users\\robin\\Desktop\\4. Semester\\Pruefungen\\PR340_Netzwerkpr\u00FCfung\\PR340-Keanu-Robin\\Netzwerkpruefung\\Server.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{BA2B56CF-CACE-4868-A48C-6CAADD9C5A32}|Netzwerkpruefung.vcxproj|solutionrelative:Server.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{BA2B56CF-CACE-4868-A48C-6CAADD9C5A32}|Netzwerkpruefung.vcxproj|C:\\Users\\robin\\Desktop\\4. Semester\\Pruefungen\\Netzwerkpr\u00FCfung\\Netzwerkpruefung\\Netzwerkpruefung.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "AbsoluteMoniker": "D:0:0:{BA2B56CF-CACE-4868-A48C-6CAADD9C5A32}|Netzwerkpruefung.vcxproj|C:\\Users\\robin\\Desktop\\4. Semester\\Pruefungen\\PR340_Netzwerkpr\u00FCfung\\PR340-Keanu-Robin\\Netzwerkpruefung\\Netzwerkpruefung.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{BA2B56CF-CACE-4868-A48C-6CAADD9C5A32}|Netzwerkpruefung.vcxproj|solutionrelative:Netzwerkpruefung.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     }
   ],
@@ -24,11 +24,11 @@
               "$type": "Document",
               "DocumentIndex": 0,
               "Title": "Server.cpp",
-              "DocumentMoniker": "C:\\Users\\robin\\Desktop\\4. Semester\\Pruefungen\\Netzwerkpr\u00FCfung\\Netzwerkpruefung\\Server.cpp",
+              "DocumentMoniker": "C:\\Users\\robin\\Desktop\\4. Semester\\Pruefungen\\PR340_Netzwerkpr\u00FCfung\\PR340-Keanu-Robin\\Netzwerkpruefung\\Server.cpp",
               "RelativeDocumentMoniker": "Server.cpp",
-              "ToolTip": "C:\\Users\\robin\\Desktop\\4. Semester\\Pruefungen\\Netzwerkpr\u00FCfung\\Netzwerkpruefung\\Server.cpp",
+              "ToolTip": "C:\\Users\\robin\\Desktop\\4. Semester\\Pruefungen\\PR340_Netzwerkpr\u00FCfung\\PR340-Keanu-Robin\\Netzwerkpruefung\\Server.cpp",
               "RelativeToolTip": "Server.cpp",
-              "ViewState": "AgIAAOwAAAAAAAAAAAAqwB4BAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAALoAAAAAAAAAAAAmwOwAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2024-08-26T20:54:29.85Z",
               "EditorCaption": ""
@@ -37,9 +37,9 @@
               "$type": "Document",
               "DocumentIndex": 1,
               "Title": "Netzwerkpruefung.cpp",
-              "DocumentMoniker": "C:\\Users\\robin\\Desktop\\4. Semester\\Pruefungen\\Netzwerkpr\u00FCfung\\Netzwerkpruefung\\Netzwerkpruefung.cpp",
+              "DocumentMoniker": "C:\\Users\\robin\\Desktop\\4. Semester\\Pruefungen\\PR340_Netzwerkpr\u00FCfung\\PR340-Keanu-Robin\\Netzwerkpruefung\\Netzwerkpruefung.cpp",
               "RelativeDocumentMoniker": "Netzwerkpruefung.cpp",
-              "ToolTip": "C:\\Users\\robin\\Desktop\\4. Semester\\Pruefungen\\Netzwerkpr\u00FCfung\\Netzwerkpruefung\\Netzwerkpruefung.cpp",
+              "ToolTip": "C:\\Users\\robin\\Desktop\\4. Semester\\Pruefungen\\PR340_Netzwerkpr\u00FCfung\\PR340-Keanu-Robin\\Netzwerkpruefung\\Netzwerkpruefung.cpp",
               "RelativeToolTip": "Netzwerkpruefung.cpp",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
