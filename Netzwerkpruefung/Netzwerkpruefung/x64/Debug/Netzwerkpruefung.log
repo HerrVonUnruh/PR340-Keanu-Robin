@@ -1,12 +1,3 @@
 ﻿  Server.cpp
-C:\Users\robin\Desktop\4. Semester\Pruefungen\Netzwerkprüfung\Netzwerkpruefung\Server.cpp(93,83): warning C4267: "Argument": Konvertierung von "size_t" nach "int", Datenverlust möglich
-C:\Users\robin\Desktop\4. Semester\Pruefungen\Netzwerkprüfung\Netzwerkpruefung\Server.cpp(134,64): warning C4267: "Argument": Konvertierung von "size_t" nach "int", Datenverlust möglich
-C:\Users\robin\Desktop\4. Semester\Pruefungen\Netzwerkprüfung\Netzwerkpruefung\Server.cpp(138,64): warning C4267: "Argument": Konvertierung von "size_t" nach "int", Datenverlust möglich
-C:\Users\robin\Desktop\4. Semester\Pruefungen\Netzwerkprüfung\Netzwerkpruefung\Server.cpp(149,64): warning C4267: "Argument": Konvertierung von "size_t" nach "int", Datenverlust möglich
-C:\Users\robin\Desktop\4. Semester\Pruefungen\Netzwerkprüfung\Netzwerkpruefung\Server.cpp(153,64): warning C4267: "Argument": Konvertierung von "size_t" nach "int", Datenverlust möglich
-C:\Users\robin\Desktop\4. Semester\Pruefungen\Netzwerkprüfung\Netzwerkpruefung\Server.cpp(160,62): warning C4267: "Argument": Konvertierung von "size_t" nach "int", Datenverlust möglich
-C:\Users\robin\Desktop\4. Semester\Pruefungen\Netzwerkprüfung\Netzwerkpruefung\Server.cpp(169,66): warning C4267: "Argument": Konvertierung von "size_t" nach "int", Datenverlust möglich
-C:\Users\robin\Desktop\4. Semester\Pruefungen\Netzwerkprüfung\Netzwerkpruefung\Server.cpp(173,66): warning C4267: "Argument": Konvertierung von "size_t" nach "int", Datenverlust möglich
-C:\Users\robin\Desktop\4. Semester\Pruefungen\Netzwerkprüfung\Netzwerkpruefung\Server.cpp(179,68): warning C4267: "Argument": Konvertierung von "size_t" nach "int", Datenverlust möglich
-C:\Users\robin\Desktop\4. Semester\Pruefungen\Netzwerkprüfung\Netzwerkpruefung\Server.cpp(192,66): warning C4267: "Argument": Konvertierung von "size_t" nach "int", Datenverlust möglich
-  Netzwerkpruefung.vcxproj -> C:\Users\robin\Desktop\4. Semester\Pruefungen\Netzwerkprüfung\Netzwerkpruefung\x64\Debug\Netzwerkpruefung.exe
+C:\Users\robin\Desktop\4. Semester\Pruefungen\PR340_Netzwerkprüfung\PR340-Keanu-Robin\Netzwerkpruefung\Server.cpp(26,56): warning C4267: "Argument": Konvertierung von "size_t" nach "int", Datenverlust möglich
+  Netzwerkpruefung.vcxproj -> C:\Users\robin\Desktop\4. Semester\Pruefungen\PR340_Netzwerkprüfung\PR340-Keanu-Robin\Netzwerkpruefung\x64\Debug\Netzwerkpruefung.exe

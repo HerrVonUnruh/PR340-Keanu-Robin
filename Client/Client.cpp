@@ -1,339 +1,171 @@
-#define WIN32_LEAN_AND_MEAN
 #include <iostream>
 #include <string>
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#include <cstdlib>
-#include <thread>
-#include <chrono>
+#pragma comment(lib, "ws2_32.lib")
 
-// Link with Ws2_32.lib
-#pragma comment(lib, "Ws2_32.lib")
-
-// Funktion zum Clearen der Konsole
+// Funktion zum Clearen der Konsole (nur für Windows)
 void clearConsole() {
-    system("cls");  // Clear für Windows, unter Linux/Mac wäre es "clear"
+    system("cls");  // Windows-Befehl zum Leeren der Konsole (bei Linux/Mac wäre es "clear")
 }
 
-// Funktion zum Setzen eines Timeouts für den Empfang auf dem Client
-void setRecvTimeout(SOCKET clientSocket, int timeoutSec) {
-    // Timeout in Millisekunden umrechnen
-    int timeoutMs = timeoutSec * 1000;
-    setsockopt(clientSocket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeoutMs, sizeof(timeoutMs));
+// Funktion zum Senden von Nachrichten an den Server
+void sendToServer(SOCKET serverSocket, const std::string& message) {
+    send(serverSocket, message.c_str(), message.size() + 1, 0);
 }
 
-void registerUser(SOCKET& clientSocket, const std::string& username, const std::string& password) {
-    std::string message = "REGISTER:" + username + ":" + password;
-    send(clientSocket, message.c_str(), message.size() + 1, 0);
-    std::cout << "Register-Nachricht gesendet: " << message << std::endl;
-}
-
-void loginUser(SOCKET& clientSocket, const std::string& username, const std::string& password) {
-    std::string message = "LOGIN:" + username + ":" + password;
-    send(clientSocket, message.c_str(), message.size() + 1, 0);
-    std::cout << "Login-Nachricht gesendet: " << message << std::endl;
-}
-
-std::string currentSession = "";  // Speichert die Session-ID
-
-// Funktion zum Löschen einer Session
-void deleteSession(SOCKET& clientSocket) {
-    if (!currentSession.empty()) {
-        std::string message = "DELETE_SESSION:" + currentSession;
-        send(clientSocket, message.c_str(), message.size() + 1, 0);
-        std::cout << "DELETE_SESSION-Nachricht gesendet: " << message << std::endl;
-
-        // Antwort vom Server abwarten
-        char buffer[512];
-        ZeroMemory(buffer, 512);
-
-        // Timeout für das Empfangsverhalten setzen (10 Sekunden)
-        setRecvTimeout(clientSocket, 10);
-
-        int iResult = recv(clientSocket, buffer, 512, 0);
-        if (iResult > 0) {
-            std::string response(buffer);
-            std::cout << "Antwort vom Server empfangen: " << response << std::endl;
-
-            if (response == "SESSION_DELETED") {
-                std::cout << "Session erfolgreich gelöscht.\n";
-                currentSession.clear();  // Session-ID zurücksetzen
-            }
-            else {
-                std::cout << "Fehler: Unerwartete Antwort vom Server: " << response << std::endl;
-            }
-        }
-        else if (iResult == 0) {
-            std::cout << "Verbindung wurde geschlossen." << std::endl;
-        }
-        else {
-            std::cout << "Fehler beim Empfang der Serverantwort: " << WSAGetLastError() << std::endl;
-        }
+// Funktion zum Empfangen von Nachrichten vom Server
+std::string receiveFromServer(SOCKET serverSocket) {
+    char buffer[1024];  // Puffer für eingehende Daten
+    int bytesReceived = recv(serverSocket, buffer, 1024, 0);
+    if (bytesReceived <= 0) {
+        return "";  // Rückgabe eines leeren Strings bei Verbindungsfehlern oder geschlossener Verbindung
     }
+    buffer[bytesReceived] = '\0';  // String-Ende setzen
+    return std::string(buffer);
 }
 
-// Funktion, um das Menü nach erfolgreichem Login/Registrierung anzuzeigen
-void showMenu(SOCKET& clientSocket) {
+// Funktion, um das Hauptmenü anzuzeigen und Aktionen zu ermöglichen (Session erstellen, beitreten, etc.)
+void showMenu(SOCKET serverSocket) {
     std::string input;
     bool running = true;
+    std::string errorMessage = "";  // Variable zur Speicherung von Fehlermeldungen
 
     while (running) {
-        clearConsole();  // Clear die Konsole vor jedem Menü
+        clearConsole();  // Clear die Konsole vor jedem neuen Menüzyklus
 
-        // Überprüfe, ob der Benutzer eine Session hat
-        if (currentSession.empty()) {
-            std::cout << "\nMenü:\n";
-            std::cout << "1. Erstelle eine Session\n";
-            std::cout << "2. Tritt einer Session bei\n";
-            std::cout << "3. Spiel beenden\n";
-        }
-        else {
-            std::cout << "\nMenü:\n";
-            std::cout << "1. Session ID: " << currentSession << "\n";
-            std::cout << "2. Lösche deine aktuelle Session\n";
-            std::cout << "3. Spiel beenden\n";
+        // Falls eine Fehlermeldung vorliegt, wird sie angezeigt
+        if (!errorMessage.empty()) {
+            std::cout << "Fehler: " << errorMessage << "\n";
         }
 
+        // Anzeige des Hauptmenüs
+        std::cout << "\nMenü:\n";
+        std::cout << "1. Session erstellen\n";
+        std::cout << "2. Einer Session beitreten\n";
+        std::cout << "3. Liste der Sessions anzeigen\n";
+        std::cout << "4. Beenden\n";
         std::cout << "Deine Wahl: ";
         std::cin >> input;
 
-        if (input == "1" && currentSession.empty()) {
-            std::string message = "CREATE_SESSION";
-            send(clientSocket, message.c_str(), message.size() + 1, 0);
-
-            // Antwort vom Server empfangen
-            char buffer[512];
-            ZeroMemory(buffer, 512);
-            int iResult = recv(clientSocket, buffer, 512, 0);
-            if (iResult > 0) {
-                std::string response(buffer);
-                std::cout << "Antwort vom Server empfangen: " << response << std::endl;
-
-                // Session-ID korrekt extrahieren (Nur die Zahl extrahieren, ohne ":ID=")
-                size_t idStart = response.find("ID=") + 3;
-                currentSession = response.substr(idStart);  // Extrahiere nur die Session-ID
-            }
-            else {
-                std::cout << "Fehler beim Empfang der Serverantwort: " << WSAGetLastError() << std::endl;
-            }
+        if (input == "1") {  // Session erstellen
+            sendToServer(serverSocket, "CREATE_SESSION");
+            std::string serverResponse = receiveFromServer(serverSocket);
+            std::cout << "Antwort vom Server: " << serverResponse << std::endl;
+            errorMessage = "";  // Fehlermeldung zurücksetzen
         }
-        else if (input == "2" && currentSession.empty()) {
-            std::string message = "LIST_SESSIONS";
-            send(clientSocket, message.c_str(), message.size() + 1, 0);
-
-            // Antwort vom Server empfangen
-            char buffer[512];
-            ZeroMemory(buffer, 512);
-            int iResult = recv(clientSocket, buffer, 512, 0);
-            if (iResult > 0) {
-                std::string response(buffer);
-                std::cout << "Antwort vom Server empfangen: " << response << std::endl;
-
-                std::string sessionId;
-                bool validSessionId = false;
-
-                // Schleife zur Validierung der Session-ID
-                while (!validSessionId) {
-                    std::cout << "\nMöchtest du einer Session beitreten? (j/n): ";
-                    std::cin >> input;
-
-                    if (input == "j") {
-                        std::cout << "Gib die Session-ID ein, der du beitreten möchtest: ";
-                        std::cin >> sessionId;
-
-                        // Versuche die Session-ID in eine Zahl zu konvertieren
-                        try {
-                            int sessionIdNum = std::stoi(sessionId);  // Konvertiere in eine Zahl
-
-                            // Wenn die Konvertierung erfolgreich war, sende die Beitrittsnachricht
-                            std::string message = "JOIN_SESSION:" + sessionId;
-                            send(clientSocket, message.c_str(), message.size() + 1, 0);
-                            validSessionId = true;  // Setze validSessionId auf true, um die Schleife zu beenden
-
-                        }
-                        catch (const std::invalid_argument&) {
-                            // Fehlermeldung bei nicht numerischer Eingabe
-                            std::cout << "Ungültige Session-ID. Bitte gib eine Zahl ein.\n";
-                        }
-                        catch (const std::out_of_range&) {
-                            // Fehlermeldung bei zu großer Zahl
-                            std::cout << "Session-ID ist zu groß. Bitte gib eine gültige Zahl ein.\n";
-                        }
-                    }
-                    else if (input == "n") {
-                        break;  // Wenn der Benutzer "n" eingibt, beende die Schleife
-                    }
-                    else {
-                        std::cout << "Ungültige Auswahl, bitte wähle erneut.\n";
-                    }
-                }
-            }
-            else {
-                std::cout << "Fehler beim Empfang der Serverantwort: " << WSAGetLastError() << std::endl;
-            }
+        else if (input == "2") {  // Session beitreten
+            std::cout << "Gib die Session-ID ein: ";
+            int sessionId;
+            std::cin >> sessionId;
+            sendToServer(serverSocket, "JOIN_SESSION:" + std::to_string(sessionId));
+            std::string serverResponse = receiveFromServer(serverSocket);
+            std::cout << "Antwort vom Server: " << serverResponse << std::endl;
+            errorMessage = "";  // Fehlermeldung zurücksetzen
         }
-        else if (input == "2" && !currentSession.empty()) {
-            deleteSession(clientSocket);  // Session löschen und dann ins Menü zurückkehren
+        else if (input == "3") {  // Liste der Sessions anzeigen
+            sendToServer(serverSocket, "LIST_SESSIONS");
+            std::string serverResponse = receiveFromServer(serverSocket);
+            std::cout << "Sessions:\n" << serverResponse << std::endl;
+            errorMessage = "";  // Fehlermeldung zurücksetzen
         }
-        else if (input == "3") {
-            // Überprüfe, ob der Benutzer eine Session hat und lösche diese, falls vorhanden
-            deleteSession(clientSocket);
-
-            std::cout << "Spiel wird beendet..." << std::endl;
-            running = false;
+        else if (input == "4") {  // Spiel beenden
+            std::cout << "Spiel wird beendet." << std::endl;
+            running = false;  // Beende das Programm ohne die Aufforderung zum Drücken von Enter
         }
         else {
-            std::cout << "Ungültige Auswahl, bitte wähle erneut." << std::endl;
+            errorMessage = "Ungültige Auswahl, bitte wähle erneut.";  // Setze die Fehlermeldung
+        }
+
+        // Nach erfolgreicher Eingabe wird die Konsole nicht gecleart und auf Enter gewartet
+        if (running && errorMessage.empty()) {
+            std::cout << "\nDrücke Enter, um zum Menü zurückzukehren...";
+            std::cin.ignore();  // Leert den Eingabepuffer
+            std::cin.get();     // Wartet auf Enter
         }
     }
-
-    // Schließe den Socket und beende sauber
-    std::cout << "Verbindung wird geschlossen...\n";
-    closesocket(clientSocket);
-    WSACleanup();
-    std::cout << "Spiel beendet.\n";
 }
 
-int main() {
-    WSADATA wsaData;
-    int iResult;
-
-    // Initialisiere Winsock
-    iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-    if (iResult != 0) {
-        std::cout << "WSAStartup failed: " << iResult << std::endl;
-        return 1;
-    }
-
-    // Erstelle einen Client-Socket
-    SOCKET clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (clientSocket == INVALID_SOCKET) {
-        std::cout << "Socket creation failed: " << WSAGetLastError() << std::endl;
-        WSACleanup();
-        return 1;
-    }
-
-    // Server-Adresse konfigurieren
-    sockaddr_in serverHint;
-    serverHint.sin_family = AF_INET;
-    serverHint.sin_port = htons(54000);  // Gleicher Port wie der Server
-    inet_pton(AF_INET, "127.0.0.1", &serverHint.sin_addr);  // Verbinde zu localhost (127.0.0.1)
-
-    // Verbindung zum Server herstellen
-    iResult = connect(clientSocket, (sockaddr*)&serverHint, sizeof(serverHint));
-    if (iResult == SOCKET_ERROR) {
-        std::cout << "Connect failed: " << WSAGetLastError() << std::endl;
-        closesocket(clientSocket);
-        WSACleanup();
-        return 1;
-    }
-
-    std::cout << "Verbunden mit dem Server!" << std::endl;
-
-    // Benutzer nach Registrierung oder Login fragen
+// Funktion zur Handhabung von Login oder Registrierung
+void loginOrRegister(SOCKET serverSocket) {
     std::string action;
-    bool loginFailed = false;  // Variable, um fehlerhaften Login zu verfolgen
-    bool invalidInput = false; // Variable, um fehlerhafte Eingabe zu verfolgen
+    bool invalidInput = false;  // Variable, um falsche Eingaben zu erkennen
 
-    // Eingabevalidierungsschleife für Registrierung oder Login
+    // Schleife, die den Benutzer nach Login oder Registrierung fragt
     do {
-        clearConsole();  // Clear die Konsole vor jeder Eingabeaufforderung
+        clearConsole();  // Clear die Konsole vor jeder neuen Eingabeaufforderung
 
-        if (invalidInput) {  // Wenn eine ungültige Eingabe gemacht wurde, wird die Fehlermeldung angezeigt
+        // Falls eine ungültige Eingabe gemacht wurde, wird eine Fehlermeldung angezeigt
+        if (invalidInput) {
             std::cout << "Falsche Eingabe, versuche es erneut.\n";
         }
 
         std::cout << "Möchtest du dich registrieren oder einloggen? (registrieren/einloggen): ";
         std::cin >> action;
 
-        invalidInput = (action != "registrieren" && action != "einloggen");  // Setze invalidInput auf true bei falscher Eingabe
+        // Überprüft, ob die Eingabe gültig ist
+        invalidInput = (action != "registrieren" && action != "einloggen");
 
-    } while (invalidInput);  // Wiederhole bis richtige Eingabe erfolgt
+    } while (invalidInput);  // Schleife läuft, bis eine gültige Eingabe gemacht wird
 
-    // Benutzernamen und Passwort abfragen
     std::string username, password;
     std::cout << "Benutzername: ";
     std::cin >> username;
     std::cout << "Passwort: ";
     std::cin >> password;
 
-    // Nachricht je nach Aktion senden
+    // Nachricht zum Registrieren oder Einloggen erstellen
+    std::string message;
     if (action == "registrieren") {
-        registerUser(clientSocket, username, password);
-    }
-    else if (action == "einloggen") {
-        loginUser(clientSocket, username, password);
-    }
-
-    // Antwort vom Server empfangen
-    char buffer[512];
-    ZeroMemory(buffer, 512);
-    iResult = recv(clientSocket, buffer, 512, 0);
-
-    // Schleife für Registrierungs-Fehlerbehandlung (Falls Benutzername bereits vergeben)
-    while (iResult > 0 && std::string(buffer) == "REGISTRATION_FAILED") {
-        clearConsole();  // Clear die Konsole bei falscher Registrierung
-        std::cout << "Benutzername existiert bereits, bitte versuche es erneut.\n";
-
-        // Eingabeaufforderung erneut anzeigen
-        do {
-            std::cout << "Möchtest du dich registrieren oder einloggen? (registrieren/einloggen): ";
-            std::cin >> action;
-
-        } while (action != "registrieren" && action != "einloggen");
-
-        std::cout << "Benutzername: ";
-        std::cin >> username;
-        std::cout << "Passwort: ";
-        std::cin >> password;
-
-        if (action == "registrieren") {
-            registerUser(clientSocket, username, password);
-        }
-        else if (action == "einloggen") {
-            loginUser(clientSocket, username, password);
-        }
-
-        ZeroMemory(buffer, 512);
-        iResult = recv(clientSocket, buffer, 512, 0);
-    }
-
-    // Schleife für Login-Fehlerbehandlung
-    while (iResult > 0 && std::string(buffer) == "LOGIN_FAILED") {
-        loginFailed = true;  // Setze Login-Fehler auf true
-        clearConsole();  // Clear die Konsole bei falschem Login
-        std::cout << "Falscher Username oder Passwort, bitte versuche es erneut.\n";
-
-        // Eingabeaufforderung erneut anzeigen
-        do {
-            std::cout << "Möchtest du dich registrieren oder einloggen? (registrieren/einloggen): ";
-            std::cin >> action;
-
-        } while (action != "registrieren" && action != "einloggen");
-
-        std::cout << "Benutzername: ";
-        std::cin >> username;
-        std::cout << "Passwort: ";
-        std::cin >> password;
-
-        if (action == "registrieren") {
-            registerUser(clientSocket, username, password);
-        }
-        else if (action == "einloggen") {
-            loginUser(clientSocket, username, password);
-        }
-
-        ZeroMemory(buffer, 512);
-        iResult = recv(clientSocket, buffer, 512, 0);
-    }
-
-    if (iResult > 0 && (std::string(buffer) == "LOGIN_SUCCESS" || std::string(buffer) == "REGISTRATION_SUCCESS")) {
-        std::cout << "Server Antwort: " << buffer << std::endl;
-        showMenu(clientSocket);  // Zeige das Menü nach erfolgreichem Login/Registrierung
+        message = "REGISTER:" + username + ":" + password;
     }
     else {
-        std::cout << "Fehler beim Empfang der Serverantwort: " << WSAGetLastError() << std::endl;
+        message = "LOGIN:" + username + ":" + password;
     }
 
+    sendToServer(serverSocket, message);
+    std::string response = receiveFromServer(serverSocket);
+
+    // Erfolgreiche Registrierung oder Login
+    if (response == "REGISTRATION_SUCCESS" || response == "LOGIN_SUCCESS") {
+        std::cout << "Erfolgreich " << (action == "registrieren" ? "registriert" : "eingeloggt") << "!" << std::endl;
+        showMenu(serverSocket);  // Menü nach erfolgreicher Anmeldung/Registrierung anzeigen
+    }
+    else if (response == "REGISTRATION_FAILED: Benutzername bereits vergeben.") {  // Fehler bei der Registrierung
+        std::cout << "Fehler: " << response << std::endl;
+        loginOrRegister(serverSocket);  // Wiederhole den Registrierungsversuch
+    }
+    else if (response == "LOGIN_FAILED: Falscher Benutzername oder Passwort.") {  // Fehler beim Login
+        std::cout << "Fehler beim Einloggen: " << response << std::endl;  // Zeigt den Grund des Fehlers
+        loginOrRegister(serverSocket);  // Wiederhole den Loginversuch
+    }
+    else {  // Andere Fehlermeldungen
+        std::cout << response << std::endl;
+        loginOrRegister(serverSocket);  // Wiederhole Login oder Registrierung
+    }
+}
+
+int main() {
+    WSADATA wsaData;
+    SOCKET serverSocket;
+    sockaddr_in serverAddr;
+
+    WSAStartup(MAKEWORD(2, 2), &wsaData);
+
+    // Erstellen eines Sockets und Verbindungsaufbau zum Server
+    serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+    serverAddr.sin_family = AF_INET;
+    inet_pton(AF_INET, "127.0.0.1", &(serverAddr.sin_addr));  // Nutze inet_pton für IP-Adressen
+    serverAddr.sin_port = htons(54000);
+
+    connect(serverSocket, (sockaddr*)&serverAddr, sizeof(serverAddr));
+
+    std::cout << "Verbunden mit dem Server." << std::endl;
+
+    loginOrRegister(serverSocket);  // Starte die Login-/Registrierungsroutine
+
+    // Schließe den Socket und beende das Programm
+    closesocket(serverSocket);
+    WSACleanup();
     return 0;
 }
