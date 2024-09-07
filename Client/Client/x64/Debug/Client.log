@@ -1,0 +1,8 @@
+﻿  Client.cpp
+C:\Users\robin\Desktop\4. Semester\Pruefungen\Netzwerkprüfung\Client\Client.cpp(27,56): warning C4267: "Argument": Konvertierung von "size_t" nach "int", Datenverlust möglich
+C:\Users\robin\Desktop\4. Semester\Pruefungen\Netzwerkprüfung\Client\Client.cpp(33,56): warning C4267: "Argument": Konvertierung von "size_t" nach "int", Datenverlust möglich
+C:\Users\robin\Desktop\4. Semester\Pruefungen\Netzwerkprüfung\Client\Client.cpp(43,60): warning C4267: "Argument": Konvertierung von "size_t" nach "int", Datenverlust möglich
+C:\Users\robin\Desktop\4. Semester\Pruefungen\Netzwerkprüfung\Client\Client.cpp(102,64): warning C4267: "Argument": Konvertierung von "size_t" nach "int", Datenverlust möglich
+C:\Users\robin\Desktop\4. Semester\Pruefungen\Netzwerkprüfung\Client\Client.cpp(122,64): warning C4267: "Argument": Konvertierung von "size_t" nach "int", Datenverlust möglich
+C:\Users\robin\Desktop\4. Semester\Pruefungen\Netzwerkprüfung\Client\Client.cpp(150,80): warning C4267: "Argument": Konvertierung von "size_t" nach "int", Datenverlust möglich
+  Client.vcxproj -> C:\Users\robin\Desktop\4. Semester\Pruefungen\Netzwerkprüfung\Client\x64\Debug\Client.exe
