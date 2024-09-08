@@ -172,13 +172,13 @@ void handleClient(SOCKET sock) {
             }
             break;
 
-        case 4:  // Sitzung erstellen
+        case 4:  // Create session
             if (loggedIn) {
                 std::string sessionPassword;
                 std::cout << "Enter session password (leave empty if no password, max 255 chars, no spaces): ";
                 std::cin >> sessionPassword;
 
-                // Überprüfung auf ungültige Eingaben
+                // Check for invalid input
                 if (sessionPassword.find(' ') != std::string::npos) {
                     std::cout << "Invalid input! Password cannot contain spaces.\n";
                     break;
@@ -191,29 +191,24 @@ void handleClient(SOCKET sock) {
                     break;
                 }
 
-                // Nachricht zur Erstellung der Sitzung vorbereiten
                 char buffer[512] = { 0 };
-                int totalLength = 6 + passwordLength;
-                *(int*)buffer = totalLength;
-                buffer[4] = 5;  // Nachrichtencode für Sitzungserstellung
+                *(int*)buffer = 1 + 1 + passwordLength;
+                buffer[4] = 5;  // Nachrichtencode für Login
                 buffer[5] = static_cast<char>(passwordLength);
+                memcpy(buffer + 6, sessionPassword.c_str(), passwordLength);
+                send(sock, buffer, 6 + passwordLength, 0);
 
-                // Passwort zur Nachricht hinzufügen, falls vorhanden
-                if (passwordLength > 0) {
-                    memcpy(buffer + 6, sessionPassword.c_str(), passwordLength);
-                }
 
-                send(sock, buffer, totalLength, 0);  // Nachricht an den Server senden
-
-                // Serverantwort empfangen
+                // Wait for server response
                 char recvBuffer[512];
                 int bytesReceived = recv(sock, recvBuffer, 512, 0);
                 if (bytesReceived > 0) {
-                    if (recvBuffer[4] == 108) {
-                        std::cout << "Session created successfully!\n";  // Erfolgreiche Erstellung
+                    // Handle server response
+                    if (recvBuffer[4] == 108) {  // 108: "Session created successfully"
+                        std::cout << "Session created successfully!\n";
                     }
-                    else if (recvBuffer[4] == 112) {
-                        std::cout << "Error: Session limit reached or other error.\n";  // Fehlermeldung
+                    else if (recvBuffer[4] == 112) {  // 112: Error code (e.g., session limit reached)
+                        std::cout << "Error: Session limit reached or other error.\n";
                     }
                 }
                 else {
@@ -221,6 +216,9 @@ void handleClient(SOCKET sock) {
                 }
             }
             break;
+
+
+
 
         case 5:  // Sitzung beitreten
             if (loggedIn) {
@@ -240,8 +238,8 @@ void handleClient(SOCKET sock) {
                 int passwordLength = sessionPassword.size();
                 char buffer[512] = { 0 };
                 *(int*)buffer = 9 + passwordLength;  // Nachrichtengröße
-                buffer[4] = 6;  // Nachrichtencode für Sitzungsbeitritt
-                *(int*)(buffer + 5) = sessionNumber;
+                buffer[5] = 6;  // Nachrichtencode für Sitzungsbeitritt
+                buffer[6] = sessionNumber;
                 buffer[9] = static_cast<char>(passwordLength);
 
                 // Passwort zur Nachricht hinzufügen, falls vorhanden
@@ -253,6 +251,7 @@ void handleClient(SOCKET sock) {
 
                 // Tic-Tac-Toe-Spiel starten
                 ticTacToeGame(sock, sessionNumber);
+                system("pause");
             }
             break;
 
@@ -295,7 +294,7 @@ int main() {
     SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
     sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(8080);
+    serverAddr.sin_port = htons(3400);
 
     // IP-Adresse des Servers setzen
     inet_pton(AF_INET, "127.0.0.1", &(serverAddr.sin_addr));

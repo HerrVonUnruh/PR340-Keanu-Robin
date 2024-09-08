@@ -1,9 +1,9 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "C:\\Users\\robin\\Desktop\\4. Semester\\Pruefungen\\PR340_Netzwerkpruefung\\PR340-Keanu-Robin\\Client\\",
+  "WorkspaceRootPath": "C:\\Users\\keanu\\Documents\\GitHub\\PR340-Keanu-Robin\\Client\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{3A0518B6-0668-4969-878A-A87329499F85}|Client.vcxproj|C:\\Users\\robin\\Desktop\\4. Semester\\Pruefungen\\PR340_Netzwerkpruefung\\PR340-Keanu-Robin\\Client\\Client.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "AbsoluteMoniker": "D:0:0:{3A0518B6-0668-4969-878A-A87329499F85}|Client.vcxproj|C:\\Users\\keanu\\Documents\\GitHub\\PR340-Keanu-Robin\\Client\\Client.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{3A0518B6-0668-4969-878A-A87329499F85}|Client.vcxproj|solutionrelative:Client.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     }
   ],
@@ -20,11 +20,11 @@
               "$type": "Document",
               "DocumentIndex": 0,
               "Title": "Client.cpp",
-              "DocumentMoniker": "C:\\Users\\robin\\Desktop\\4. Semester\\Pruefungen\\PR340_Netzwerkpruefung\\PR340-Keanu-Robin\\Client\\Client.cpp",
+              "DocumentMoniker": "C:\\Users\\keanu\\Documents\\GitHub\\PR340-Keanu-Robin\\Client\\Client.cpp",
               "RelativeDocumentMoniker": "Client.cpp",
-              "ToolTip": "C:\\Users\\robin\\Desktop\\4. Semester\\Pruefungen\\PR340_Netzwerkpruefung\\PR340-Keanu-Robin\\Client\\Client.cpp",
+              "ToolTip": "C:\\Users\\keanu\\Documents\\GitHub\\PR340-Keanu-Robin\\Client\\Client.cpp",
               "RelativeToolTip": "Client.cpp",
-              "ViewState": "AgIAABsBAAAAAAAAAAAkwDkBAAAAAAAAAAAAAA==",
+              "ViewState": "AQIAAOkAAAAAAAAAAAAAAPMAAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2024-08-27T09:16:22.357Z",
               "EditorCaption": ""

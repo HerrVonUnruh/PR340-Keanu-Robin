@@ -8,7 +8,7 @@
 
 #pragma comment(lib, "Ws2_32.lib")  // Link zur Winsock-Bibliothek
 
-const int PORT = 8080;  // Portnummer für den Server
+const int PORT = 3400;  // Portnummer für den Server
 const int BUFFER_SIZE = 512;  // Größe des Nachrichtenpuffers
 const int SESSION_LIMIT = 8;  // Maximale Anzahl von Sitzungen
 
@@ -167,7 +167,7 @@ void handleSessionListRequest(SOCKET clientSocket) {
 void handleCreateSession(SOCKET clientSocket, const std::vector<char>& message) {
     int passwordLength = message[5];  // Länge des Sitzungspassworts
     std::string password(message.begin() + 6, message.begin() + 6 + passwordLength);  // Sitzungspasswort
-
+    //system("pause");
     // Überprüfung, ob die maximale Anzahl an Sitzungen erreicht ist
     if (activeSessions.size() >= SESSION_LIMIT) {
         std::vector<char> denyData = { 4 };  // Sitzungslimit erreicht
@@ -242,6 +242,8 @@ void handleClientMessages() {
             int messageLength = *(int*)buffer.data();  // Nachrichtengröße auslesen
             if (buffer.size() >= messageLength + 4) {
                 std::vector<char> message(buffer.begin(), buffer.begin() + messageLength + 4);  // Nachricht extrahieren
+                int messageCode = message[4];
+                std::cout << "[INFO] processing message with code: " << messageCode << std::endl;
                 processClientMessage(clientSocket, message);  // Nachricht verarbeiten
                 buffer.erase(buffer.begin(), buffer.begin() + messageLength + 4);  // Nachricht aus dem Puffer entfernen
             }
