@@ -1,3 +1,8 @@
 ﻿  Client.cpp
-C:\Users\robin\Desktop\4. Semester\Pruefungen\PR340_Netzwerkprüfung\PR340-Keanu-Robin\Client\Client.cpp(14,56): warning C4267: "Argument": Konvertierung von "size_t" nach "int", Datenverlust möglich
-  Client.vcxproj -> C:\Users\robin\Desktop\4. Semester\Pruefungen\PR340_Netzwerkprüfung\PR340-Keanu-Robin\Client\x64\Debug\Client.exe
+C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Client\Client.cpp(95,32): warning C4267: "Initialisierung": Konvertierung von "size_t" nach "int", Datenverlust möglich
+C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Client\Client.cpp(96,36): warning C4267: "Initialisierung": Konvertierung von "size_t" nach "int", Datenverlust möglich
+C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Client\Client.cpp(116,32): warning C4267: "Initialisierung": Konvertierung von "size_t" nach "int", Datenverlust möglich
+C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Client\Client.cpp(117,36): warning C4267: "Initialisierung": Konvertierung von "size_t" nach "int", Datenverlust möglich
+C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Client\Client.cpp(145,36): warning C4267: "Initialisierung": Konvertierung von "size_t" nach "int", Datenverlust möglich
+C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Client\Client.cpp(166,36): warning C4267: "Initialisierung": Konvertierung von "size_t" nach "int", Datenverlust möglich
+  Client.vcxproj -> C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Client\x64\Debug\Client.exe
