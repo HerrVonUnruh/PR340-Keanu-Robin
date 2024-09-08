@@ -1,36 +1,36 @@
 #define _WIN32_WINNT 0x0600  // Windows Vista oder höher
-
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include <iostream>
 #include <string>
 #include <vector>
-#pragma comment(lib, "ws2_32.lib")
+#pragma comment(lib, "ws2_32.lib")  // Link zu Winsock-Bibliotheken
 
-bool loggedIn = false;
-std::string playerName;
-std::vector<std::string> sessionList;
+bool loggedIn = false;  // Status, ob der Nutzer eingeloggt ist
+std::string playerName;  // Spielername
+std::vector<std::string> sessionList;  // Liste der verfügbaren Sitzungen
 
-// Funktion zum Löschen des Bildschirms
+// Funktion zum Löschen des Bildschirms (für Windows)
 void clearScreen() {
-    system("cls");  // Für Windows
+    system("cls");
 }
 
+// Funktion zum Drucken des Hauptmenüs
 void printMenu() {
     clearScreen();
     std::cout << "Tic Tac Toe Game Menu\n";
 
-    if (!loggedIn) {
+    if (!loggedIn) {  // Zeige das Registrierungs-/Login-Menü, wenn der Benutzer nicht eingeloggt ist
         std::cout << "1. Register\n";
         std::cout << "2. Login\n";
     }
-    else {
+    else {  // Zeige das Spielmenü, wenn der Benutzer eingeloggt ist
         std::cout << "3. Request Session List\n";
         std::cout << "4. Create Session\n";
         std::cout << "5. Join Session\n";
         std::cout << "6. Logout\n";
 
-        if (!sessionList.empty()) {
+        if (!sessionList.empty()) {  // Zeige die Liste der verfügbaren Sitzungen, wenn vorhanden
             std::cout << "\nAvailable Sessions:\n";
             for (const auto& session : sessionList) {
                 std::cout << session << std::endl;
@@ -41,67 +41,89 @@ void printMenu() {
     std::cout << "0. Exit\n";
 }
 
+// Funktion zum Anfordern der Sitzungsliste vom Server
 void requestSessionList(SOCKET sock) {
+    // Nachricht an den Server senden, um die Sitzungsliste anzufordern
     char buffer[5] = { 0 };
-    *(int*)buffer = 1;  // Nachrichtlänge
-    buffer[4] = 2;      // Code für Session-List-Anfrage
+    *(int*)buffer = 1;  // Nachrichtengröße
+    buffer[4] = 2;      // Code für Anforderung der Sitzungsliste
     send(sock, buffer, 5, 0);
 
-    // Empfange Session-Liste vom Server (z.B. Größe und Infos)
+    // Antwort vom Server empfangen
     char recvBuffer[512];
     int bytesReceived = recv(sock, recvBuffer, 512, 0);
     if (bytesReceived > 0) {
         int offset = 5;
-        sessionList.clear();
+        sessionList.clear();  // Sitzungsliste leeren
         while (offset < bytesReceived) {
-            int sessionNumber = *(int*)(recvBuffer + offset);
+            int sessionNumber = *(int*)(recvBuffer + offset);  // Sitzungsnummer auslesen
             offset += 4;
-            int enemyNameLength = recvBuffer[offset++];
-            bool passwordProtected = recvBuffer[offset++];
+            int enemyNameLength = recvBuffer[offset++];  // Länge des Gegnernamens
+            bool passwordProtected = recvBuffer[offset++];  // Ob die Sitzung passwortgeschützt ist
 
+            // Informationen über die Sitzung zusammenstellen
             std::string sessionInfo = "Session " + std::to_string(sessionNumber);
             sessionInfo += enemyNameLength == 0 ? " (Waiting for player)" : " (Enemy)";
             sessionInfo += passwordProtected ? " [Password Protected]" : " [Open]";
-            sessionList.push_back(sessionInfo);
+            sessionList.push_back(sessionInfo);  // Sitzung zur Liste hinzufügen
         }
     }
 }
 
+// Funktion zum Starten des Tic-Tac-Toe-Spiels (noch ohne Logik implementiert)
 void ticTacToeGame(SOCKET sock, int sessionNumber) {
     clearScreen();
     std::cout << "You joined session: " << sessionNumber << std::endl;
     std::cout << "Tic Tac Toe game will now start...\n";
-    // Hier kommt die Logik für das Tic-Tac-Toe-Spiel
-    // Empfange Spielfeld und Zugstatus vom Server und aktualisiere das Spielfeld entsprechend
+    // Hier könnte die Spiellogik implementiert werden
 }
 
+// Hauptfunktion zur Verwaltung des Clients
 void handleClient(SOCKET sock) {
     int choice;
 
     do {
-        printMenu();
-        std::cout << "Enter your choice: ";
+        printMenu();  // Zeige das Menü
+        std::cout << "Enter your choice: ";  // Benutzerauswahl eingeben
         std::cin >> choice;
 
         switch (choice) {
-        case 1:  // Register
+        case 1:  // Registrierung
             if (!loggedIn) {
                 std::cout << "Enter name: ";
                 std::cin >> playerName;
                 std::string password;
-                std::cout << "Enter password: ";
+                std::cout << "Enter password (max 255 chars, no spaces): ";
                 std::cin >> password;
 
+                // Überprüfung der Eingaben auf ungültige Zeichen oder leere Felder
+                if (password.empty() || password.find(' ') != std::string::npos || playerName.empty()) {
+                    std::cout << "Invalid input! Password and name cannot be empty or contain spaces.\n";
+                    break;
+                }
+
+                // Nachricht zur Registrierung vorbereiten
                 int nameLength = playerName.size();
                 int passwordLength = password.size();
                 char buffer[512] = { 0 };
-                *(int*)buffer = 1 + 1 + nameLength + 1 + passwordLength;
-                buffer[4] = 1;  // Code für Registrierung
-                buffer[5] = static_cast<char>(nameLength);
-                memcpy(buffer + 6, playerName.c_str(), nameLength);
-                buffer[6 + nameLength] = static_cast<char>(passwordLength);
-                memcpy(buffer + 7 + nameLength, password.c_str(), passwordLength);
-                send(sock, buffer, 7 + nameLength + passwordLength, 0);
+                *(int*)buffer = 1 + 1 + nameLength + 1 + passwordLength;  // Nachrichtengröße
+                buffer[4] = 1;  // Nachrichtencode für Registrierung
+                buffer[5] = static_cast<char>(nameLength);  // Länge des Spielernamens
+                memcpy(buffer + 6, playerName.c_str(), nameLength);  // Spielernamen hinzufügen
+                buffer[6 + nameLength] = static_cast<char>(passwordLength);  // Länge des Passworts
+                memcpy(buffer + 7 + nameLength, password.c_str(), passwordLength);  // Passwort hinzufügen
+                send(sock, buffer, 7 + nameLength + passwordLength, 0);  // Nachricht an den Server senden
+
+                // Antwort vom Server empfangen
+                char recvBuffer[5];
+                int bytesReceived = recv(sock, recvBuffer, 5, 0);
+                if (bytesReceived > 0 && recvBuffer[4] == 101) {
+                    std::cout << "Registration successful! Logging you in...\n";
+                    loggedIn = true;  // Erfolgreiche Registrierung, Benutzer wird eingeloggt
+                }
+                else if (bytesReceived > 0 && recvBuffer[4] == 102) {
+                    std::cout << "Error: Name already taken!\n";  // Fehlermeldung bei doppeltem Namen
+                }
             }
             break;
 
@@ -113,48 +135,94 @@ void handleClient(SOCKET sock) {
                 std::cout << "Enter password: ";
                 std::cin >> password;
 
+                // Überprüfung auf leere Eingaben
+                if (playerName.empty() || password.empty()) {
+                    std::cout << "Name and password cannot be empty.\n";
+                    break;
+                }
+
+                // Nachricht zum Login vorbereiten
                 int nameLength = playerName.size();
                 int passwordLength = password.size();
                 char buffer[512] = { 0 };
                 *(int*)buffer = 1 + 1 + nameLength + 1 + passwordLength;
-                buffer[4] = 3;  // Code für Login
+                buffer[4] = 3;  // Nachrichtencode für Login
                 buffer[5] = static_cast<char>(nameLength);
                 memcpy(buffer + 6, playerName.c_str(), nameLength);
                 buffer[6 + nameLength] = static_cast<char>(passwordLength);
                 memcpy(buffer + 7 + nameLength, password.c_str(), passwordLength);
                 send(sock, buffer, 7 + nameLength + passwordLength, 0);
 
-                // Hier sollte auf die Bestätigung des Servers gewartet werden
-                // Wenn erfolgreich, setze loggedIn = true
-                loggedIn = true;
+                // Antwort vom Server empfangen
+                char recvBuffer[5];
+                int bytesReceived = recv(sock, recvBuffer, 5, 0);
+                if (bytesReceived > 0 && recvBuffer[4] == 104) {
+                    std::cout << "Login successful!\n";
+                    loggedIn = true;
+                }
+                else if (bytesReceived > 0 && recvBuffer[4] == 105) {
+                    std::cout << "Error: Incorrect name or password.\n";
+                }
             }
             break;
 
-        case 3:  // Request Session List
+        case 3:  // Sitzungsliste anfordern
             if (loggedIn) {
                 requestSessionList(sock);
             }
             break;
 
-        case 4:  // Create Session
+        case 4:  // Sitzung erstellen
             if (loggedIn) {
                 std::string sessionPassword;
-                std::cout << "Enter session password (leave empty if no password): ";
+                std::cout << "Enter session password (leave empty if no password, max 255 chars, no spaces): ";
                 std::cin >> sessionPassword;
 
+                // Überprüfung auf ungültige Eingaben
+                if (sessionPassword.find(' ') != std::string::npos) {
+                    std::cout << "Invalid input! Password cannot contain spaces.\n";
+                    break;
+                }
+
                 int passwordLength = sessionPassword.size();
+
+                if (passwordLength > 255) {
+                    std::cout << "Password is too long (max 255 characters).\n";
+                    break;
+                }
+
+                // Nachricht zur Erstellung der Sitzung vorbereiten
                 char buffer[512] = { 0 };
-                *(int*)buffer = 1 + passwordLength;
-                buffer[4] = 5;  // Code für Session erstellen
+                int totalLength = 6 + passwordLength;
+                *(int*)buffer = totalLength;
+                buffer[4] = 5;  // Nachrichtencode für Sitzungserstellung
                 buffer[5] = static_cast<char>(passwordLength);
+
+                // Passwort zur Nachricht hinzufügen, falls vorhanden
                 if (passwordLength > 0) {
                     memcpy(buffer + 6, sessionPassword.c_str(), passwordLength);
                 }
-                send(sock, buffer, 6 + passwordLength, 0);
+
+                send(sock, buffer, totalLength, 0);  // Nachricht an den Server senden
+
+                // Serverantwort empfangen
+                char recvBuffer[512];
+                int bytesReceived = recv(sock, recvBuffer, 512, 0);
+                if (bytesReceived > 0) {
+                    if (recvBuffer[4] == 108) {
+                        std::cout << "Session created successfully!\n";  // Erfolgreiche Erstellung
+                    }
+                    else if (recvBuffer[4] == 112) {
+                        std::cout << "Error: Session limit reached or other error.\n";  // Fehlermeldung
+                    }
+                }
+                else {
+                    std::cout << "Error: No response from the server.\n";
+                }
             }
             break;
 
-        case 5:  // Join Session
+        case 5:  // Sitzung beitreten
             if (loggedIn) {
                 int sessionNumber;
                 std::string sessionPassword;
@@ -163,17 +231,27 @@ void handleClient(SOCKET sock) {
                 std::cout << "Enter session password (if required): ";
                 std::cin >> sessionPassword;
 
+                // Überprüfung auf ungültige Eingaben
+                if (sessionPassword.find(' ') != std::string::npos) {
+                    std::cout << "Invalid input! Password cannot contain spaces.\n";
+                    break;
+                }
+
                 int passwordLength = sessionPassword.size();
                 char buffer[512] = { 0 };
-                *(int*)buffer = 9 + passwordLength;
-                buffer[4] = 6;  // Code für Session beitreten
+                *(int*)buffer = 9 + passwordLength;  // Nachrichtengröße
+                buffer[4] = 6;  // Nachrichtencode für Sitzungsbeitritt
                 *(int*)(buffer + 5) = sessionNumber;
                 buffer[9] = static_cast<char>(passwordLength);
+
+                // Passwort zur Nachricht hinzufügen, falls vorhanden
                 if (passwordLength > 0) {
                     memcpy(buffer + 10, sessionPassword.c_str(), passwordLength);
                 }
-                send(sock, buffer, 10 + passwordLength, 0);
 
+                send(sock, buffer, 10 + passwordLength, 0);  // Nachricht an den Server senden
+
+                // Tic-Tac-Toe-Spiel starten
                 ticTacToeGame(sock, sessionNumber);
             }
             break;
@@ -182,14 +260,23 @@ void handleClient(SOCKET sock) {
             if (loggedIn) {
                 char buffer[5] = { 0 };
                 *(int*)buffer = 1;
-                buffer[4] = 4;  // Code für Logout
+                buffer[4] = 4;  // Nachrichtencode für Logout
                 send(sock, buffer, 5, 0);
-                loggedIn = false;
-                sessionList.clear();
+
+                // Serverantwort (optional)
+                char recvBuffer[5];
+                int bytesReceived = recv(sock, recvBuffer, 5, 0);
+                if (bytesReceived > 0 && recvBuffer[4] == 104) {
+                    std::cout << "Logged out successfully!\n";
+                }
+
+                loggedIn = false;  // Benutzer wird ausgeloggt
+                sessionList.clear();  // Sitzungsliste leeren
+                std::cout << "Logged out.\n";
             }
             break;
 
-        case 0:  // Exit
+        case 0:  // Programm beenden
             std::cout << "Exiting...\n";
             break;
 
@@ -204,18 +291,22 @@ int main() {
     WSADATA data;
     WSAStartup(MAKEWORD(2, 2), &data);
 
+    // Client-Socket erstellen
     SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
     sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(54000);
+    serverAddr.sin_port = htons(8080);
 
-    // Verwenden Sie inet_pton anstelle von inet_addr
+    // IP-Adresse des Servers setzen
     inet_pton(AF_INET, "127.0.0.1", &(serverAddr.sin_addr));
 
+    // Verbindung zum Server herstellen
     connect(sock, (sockaddr*)&serverAddr, sizeof(serverAddr));
 
+    // Client-Logik starten
     handleClient(sock);
 
+    // Socket schließen und Winsock aufräumen
     closesocket(sock);
     WSACleanup();
     return 0;
