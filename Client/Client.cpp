@@ -97,6 +97,8 @@ void ticTacToeGame(const char* buffer) {
     std::cout << "Session Number: " << sessionNumber << std::endl;
     std::cout << "Game against: " << enemyName << std::endl;
     displayBoard(board);
+
+    system("pause");
 }
 
 
@@ -228,6 +230,8 @@ void handleClient(SOCKET sock) {
                 if (bytesReceived > 0) {
                     // Handle server response
                     if (recvBuffer[4] == 108) {  // 108: "Session created successfully"
+                        ticTacToeGame(recvBuffer);
+
                         std::cout << "Session created successfully!\n";
                     }
                     else if (recvBuffer[4] == 112) {  // 112: Error code (e.g., session limit reached)
@@ -287,8 +291,6 @@ void handleClient(SOCKET sock) {
                 else {
                     std::cout << "Error: No response from the server.\n";
                 }
-
-                system("pause");
             }
             break;
 

@@ -1,8 +1,8 @@
 ﻿  Client.cpp
-C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Client\Client.cpp(129,32): warning C4267: "Initialisierung": Konvertierung von "size_t" nach "int", Datenverlust möglich
-C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Client\Client.cpp(130,36): warning C4267: "Initialisierung": Konvertierung von "size_t" nach "int", Datenverlust möglich
-C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Client\Client.cpp(168,32): warning C4267: "Initialisierung": Konvertierung von "size_t" nach "int", Datenverlust möglich
-C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Client\Client.cpp(169,36): warning C4267: "Initialisierung": Konvertierung von "size_t" nach "int", Datenverlust möglich
-C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Client\Client.cpp(210,36): warning C4267: "Initialisierung": Konvertierung von "size_t" nach "int", Datenverlust möglich
-C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Client\Client.cpp(261,36): warning C4267: "Initialisierung": Konvertierung von "size_t" nach "int", Datenverlust möglich
+C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Client\Client.cpp(131,32): warning C4267: "Initialisierung": Konvertierung von "size_t" nach "int", Datenverlust möglich
+C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Client\Client.cpp(132,36): warning C4267: "Initialisierung": Konvertierung von "size_t" nach "int", Datenverlust möglich
+C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Client\Client.cpp(170,32): warning C4267: "Initialisierung": Konvertierung von "size_t" nach "int", Datenverlust möglich
+C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Client\Client.cpp(171,36): warning C4267: "Initialisierung": Konvertierung von "size_t" nach "int", Datenverlust möglich
+C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Client\Client.cpp(212,36): warning C4267: "Initialisierung": Konvertierung von "size_t" nach "int", Datenverlust möglich
+C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Client\Client.cpp(265,36): warning C4267: "Initialisierung": Konvertierung von "size_t" nach "int", Datenverlust möglich
   Client.vcxproj -> C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Client\x64\Debug\Client.exe
