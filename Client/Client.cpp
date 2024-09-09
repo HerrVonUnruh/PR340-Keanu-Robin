@@ -238,7 +238,7 @@ void handleClient(SOCKET sock) {
                 int passwordLength = sessionPassword.size();
 
                 char buffer[512] = { 0 };
-                *(int*)buffer = 1 + 1 + passwordLength;
+                *(int*)buffer = 1 + 1 + 1 + passwordLength;
                 buffer[4] = 6;  // Nachrichtencode für Login
                 buffer[5] = sessionNumber;
                 buffer[6] = passwordLength;
