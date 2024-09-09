@@ -236,18 +236,14 @@ void handleClient(SOCKET sock) {
                 }
 
                 int passwordLength = sessionPassword.size();
+
                 char buffer[512] = { 0 };
-                *(int*)buffer = 9 + passwordLength;  // Nachrichtengröße
-                buffer[5] = 6;  // Nachrichtencode für Sitzungsbeitritt
-                buffer[6] = sessionNumber;
-                buffer[9] = static_cast<char>(passwordLength);
-
-                // Passwort zur Nachricht hinzufügen, falls vorhanden
-                if (passwordLength > 0) {
-                    memcpy(buffer + 10, sessionPassword.c_str(), passwordLength);
-                }
-
-                send(sock, buffer, 10 + passwordLength, 0);  // Nachricht an den Server senden
+                *(int*)buffer = 1 + 1 + passwordLength;
+                buffer[4] = 6;  // Nachrichtencode für Login
+                buffer[5] = sessionNumber;
+                buffer[6] = passwordLength;
+                memcpy(buffer + 7, sessionPassword.c_str(), passwordLength);
+                send(sock, buffer, 7 + passwordLength, 0);
 
                 // Tic-Tac-Toe-Spiel starten
                 ticTacToeGame(sock, sessionNumber);
