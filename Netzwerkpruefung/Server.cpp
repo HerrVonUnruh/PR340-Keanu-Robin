@@ -271,14 +271,21 @@ void handleJoinSession(SOCKET clientSocket, const std::vector<char>& message) {
     session.player2 = playerName;
 
     // Erfolgreiche Sitzungsfreigabe an den Client senden
-    std::vector<char> accessData(14 + session.player1.size() + 9, 0);  // Reserve space for the game board
-    *(int*)accessData.data() = sessionNumber;  // Sitzungsnummer
-    accessData[4] = static_cast<char>(session.player1.size());  // Länge des Spielernamens
-    std::copy(session.player1.begin(), session.player1.end(), accessData.begin() + 5);  // Name des ersten Spielers hinzufügen
-    accessData[5 + session.player1.size()] = session.isPlayer1Turn ? 1 : 0;  // Ist Spieler 1 an der Reihe?
+    std::vector<char> accessData(14 + session.player1.size(), 0);
+    accessData[0] = sessionNumber;
+    accessData[1] = session.player1.size();
+    std::copy(session.player1.begin(), session.player1.end(), accessData.begin() + 2);  // Spezielle Daten hinzufügen
+    
+    accessData[2 + session.player1.size()] = session.board[0];
+    accessData[3 + session.player1.size()] = session.board[1];
+    accessData[4 + session.player1.size()] = session.board[2];
+    accessData[5 + session.player1.size()] = session.board[3];
+    accessData[6 + session.player1.size()] = session.board[4];
+    accessData[7 + session.player1.size()] = session.board[5];
+    accessData[8 + session.player1.size()] = session.board[6];
+    accessData[9 + session.player1.size()] = session.board[7];
+    accessData[10 + session.player1.size()] = session.board[8];
 
-    // Spielfeldzustand hinzufügen
-    std::copy(session.board, session.board + 9, accessData.begin() + 6 + session.player1.size());
 
     sendMessage(clientSocket, 108, accessData);  // Erfolgreiche Sitzungsfreigabe senden
     std::cout << "[SUCCESS] User " << playerName << " joined session " << sessionNumber << "." << std::endl;

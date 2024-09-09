@@ -70,13 +70,36 @@ void requestSessionList(SOCKET sock) {
     }
 }
 
-// Funktion zum Starten des Tic-Tac-Toe-Spiels (noch ohne Logik implementiert)
-void ticTacToeGame(SOCKET sock, int sessionNumber) {
-    clearScreen();
-    std::cout << "Tic Tac Toe Game in session: " << sessionNumber << std::endl;
-    std::cout << "wait you dingus...\n";
-    // Hier könnte die Spiellogik implementiert werden
+void displayBoard(const std::vector<char>& board) {
+    for (int i = 0; i < 9; ++i) {
+        if (i % 3 == 0) std::cout << std::endl;  // Neue Zeile nach jeder dritten Zelle
+        char cell = board[i] == 'X' ? 'X' : (board[i] == 'O' ? 'O' : '-');
+        std::cout << cell << " ";
+    }
+    std::cout << std::endl;
 }
+
+void ticTacToeGame(const char* buffer) {
+    // Sitzungsnummer (aus Buffer extrahieren)
+    int sessionNumber = buffer[0];  // Sitzungsnummer
+
+    // Länge des Gegners (Spieler 1)
+    int enemyNameLength = buffer[1];
+    std::string enemyName(buffer + 2, buffer + 2 + enemyNameLength);  // Name des Gegners
+
+    // Spielfeldzustand dekodieren
+    std::vector<char> board(9);
+    for (int i = 0; i < 9; ++i) {
+        board[i] = buffer[2 + enemyNameLength + i];
+    }
+
+    // Spielfeld und Informationen anzeigen
+    std::cout << "Session Number: " << sessionNumber << std::endl;
+    std::cout << "Game against: " << enemyName << std::endl;
+    displayBoard(board);
+}
+
+
 
 // Hauptfunktion zur Verwaltung des Clients
 void handleClient(SOCKET sock) {
@@ -253,8 +276,8 @@ void handleClient(SOCKET sock) {
                     // Handle server response
                     if (recvBuffer[4] == 108) {  // 108: "Session created successfully"
                         // Tic-Tac-Toe-Spiel starten
-                        ticTacToeGame(sock, sessionNumber);
-                
+                        ticTacToeGame(recvBuffer);
+                        
                         std::cout << "jo join funzt\n";
                     }
                     else if (recvBuffer[4] == 112) {  // 112: Error code (e.g., session limit reached)
