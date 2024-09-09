@@ -73,8 +73,8 @@ void requestSessionList(SOCKET sock) {
 // Funktion zum Starten des Tic-Tac-Toe-Spiels (noch ohne Logik implementiert)
 void ticTacToeGame(SOCKET sock, int sessionNumber) {
     clearScreen();
-    std::cout << "You joined session: " << sessionNumber << std::endl;
-    std::cout << "Tic Tac Toe game will now start...\n";
+    std::cout << "Tic Tac Toe Game in session: " << sessionNumber << std::endl;
+    std::cout << "wait you dingus...\n";
     // Hier könnte die Spiellogik implementiert werden
 }
 
@@ -245,8 +245,26 @@ void handleClient(SOCKET sock) {
                 memcpy(buffer + 7, sessionPassword.c_str(), passwordLength);
                 send(sock, buffer, 7 + passwordLength, 0);
 
-                // Tic-Tac-Toe-Spiel starten
-                ticTacToeGame(sock, sessionNumber);
+
+                // Wait for server response
+                char recvBuffer[512];
+                int bytesReceived = recv(sock, recvBuffer, 512, 0);
+                if (bytesReceived > 0) {
+                    // Handle server response
+                    if (recvBuffer[4] == 108) {  // 108: "Session created successfully"
+                        // Tic-Tac-Toe-Spiel starten
+                        ticTacToeGame(sock, sessionNumber);
+                
+                        std::cout << "jo join funzt\n";
+                    }
+                    else if (recvBuffer[4] == 112) {  // 112: Error code (e.g., session limit reached)
+                        std::cout << "welt untergang. join wurd abgelehnt\n";
+                    }
+                }
+                else {
+                    std::cout << "Error: No response from the server.\n";
+                }
+
                 system("pause");
             }
             break;
