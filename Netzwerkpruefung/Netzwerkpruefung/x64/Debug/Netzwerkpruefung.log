@@ -1,8 +1,2 @@
 ﻿  Server.cpp
-C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Netzwerkpruefung\Server.cpp(92,52): warning C4267: "Argument": Konvertierung von "size_t" nach "int", Datenverlust möglich
-C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Netzwerkpruefung\Server.cpp(276,41): warning C4267: "=": Konvertierung von "size_t" nach "_Ty", Datenverlust möglich
-C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Netzwerkpruefung\Server.cpp(276,41): warning C4267:         with
-C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Netzwerkpruefung\Server.cpp(276,41): warning C4267:         [
-C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Netzwerkpruefung\Server.cpp(276,41): warning C4267:             _Ty=char
-C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Netzwerkpruefung\Server.cpp(276,41): warning C4267:         ]
-  Netzwerkpruefung.vcxproj -> C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Netzwerkpruefung\x64\Debug\Netzwerkpruefung.exe
+  Netzwerkpruefung.vcxproj -> C:\Users\robin\Desktop\4. Semester\Pruefungen\PR340_Netzwerkpruefung\PR340-Keanu-Robin\Netzwerkpruefung\x64\Debug\Netzwerkpruefung.exe

@@ -5,40 +5,38 @@
 #include <vector>
 #include <string>
 #include <cstring>
+#include <algorithm>
 
-#pragma comment(lib, "Ws2_32.lib")  // Link zur Winsock-Bibliothek
+#pragma comment(lib, "Ws2_32.lib")
 
-const int PORT = 3400;  // Portnummer für den Server
-const int BUFFER_SIZE = 512;  // Größe des Nachrichtenpuffers
-const int SESSION_LIMIT = 8;  // Maximale Anzahl von Sitzungen
+const int PORT = 3400;
+const int BUFFER_SIZE = 512;
+const int SESSION_LIMIT = 30;
 
-// Struktur für eine Tic-Tac-Toe-Sitzung
 struct Session {
-    int sessionNumber;  // Sitzungsnummer
-    std::string player1;  // Name des ersten Spielers
-    std::string player2;  // Name des zweiten Spielers
-    bool passwordProtected;  // Ist die Sitzung passwortgeschützt?
-    std::string password;  // Passwort der Sitzung
-    char board[9] = { 0 };  // Spielfeld für Tic-Tac-Toe
-    bool isPlayer1Turn = true;  // Ist Spieler 1 an der Reihe?
+    int sessionNumber;
+    std::string player1;
+    std::string player2;
+    bool passwordProtected;
+    std::string password;
+    char board[9] = { 0 };
+    bool isPlayer1Turn = true;
+    bool gameStarted = false;
 };
 
-// Struktur für einen Benutzer
 struct User {
-    std::string name;  // Benutzername
-    std::string password;  // Benutzerpasswort
-    SOCKET socket;  // Socket des Benutzers
-    bool loggedIn = false;  // Ist der Benutzer eingeloggt?
-    int currentSession = -1;  // Aktuelle Sitzung des Benutzers
+    std::string name;
+    std::string password;
+    SOCKET socket;
+    bool loggedIn = false;
+    int currentSession = -1;
 };
 
-// Karten zur Speicherung von Benutzern und Sitzungen
 std::unordered_map<std::string, User> registeredUsers;
 std::unordered_map<int, Session> activeSessions;
 std::unordered_map<SOCKET, std::vector<char>> clientBuffers;
-int sessionCounter = 0;  // Zähler für die Sitzungsnummern
+int sessionCounter = 0;
 
-// Funktion zur Initialisierung von Winsock
 void initWinsock() {
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
@@ -47,7 +45,6 @@ void initWinsock() {
     }
 }
 
-// Funktion zur Erstellung des Listener-Sockets (für eingehende Verbindungen)
 SOCKET createListenerSocket() {
     SOCKET listener = socket(AF_INET, SOCK_STREAM, 0);
     if (listener == INVALID_SOCKET) {
@@ -75,7 +72,6 @@ SOCKET createListenerSocket() {
         exit(1);
     }
 
-    // Setzt den Listener-Socket in den nicht-blockierenden Modus
     u_long mode = 1;
     ioctlsocket(listener, FIONBIO, &mode);
 
@@ -83,104 +79,97 @@ SOCKET createListenerSocket() {
     return listener;
 }
 
-// Funktion zum Senden von Nachrichten an den Client
 void sendMessage(SOCKET clientSocket, char messageCode, const std::vector<char>& data = {}) {
     std::vector<char> message(5 + data.size());
-    *(int*)message.data() = (int)(1 + data.size());  // Nachrichtengröße
-    message[4] = messageCode;  // Nachrichtencode
-    std::copy(data.begin(), data.end(), message.begin() + 5);  // Spezielle Daten hinzufügen
-    send(clientSocket, message.data(), message.size(), 0);  // Nachricht senden
+    *(int*)message.data() = static_cast<int>(1 + data.size());
+    message[4] = messageCode;
+    std::copy(data.begin(), data.end(), message.begin() + 5);
+    send(clientSocket, message.data(), static_cast<int>(message.size()), 0);
 }
 
-// Funktion zur Registrierung eines Benutzers
 void handleRegister(SOCKET clientSocket, const std::vector<char>& message) {
-    int nameLength = message[5];  // Länge des Benutzernamens
-    std::string name(message.begin() + 6, message.begin() + 6 + nameLength);  // Benutzername
-    int passwordLength = message[6 + nameLength];  // Länge des Passworts
-    std::string password(message.begin() + 7 + nameLength, message.begin() + 7 + nameLength + passwordLength);  // Passwort
+    int nameLength = message[5];
+    std::string name(message.begin() + 6, message.begin() + 6 + nameLength);
+    int passwordLength = message[6 + nameLength];
+    std::string password(message.begin() + 7 + nameLength, message.begin() + 7 + nameLength + passwordLength);
 
-    if (registeredUsers.find(name) == registeredUsers.end()) {  // Wenn der Benutzername noch nicht existiert
-        registeredUsers[name] = { name, password, clientSocket, true, -1 };  // Benutzer hinzufügen und als eingeloggt markieren
-        sendMessage(clientSocket, 101);  // Erfolgreiche Registrierung senden
+    if (registeredUsers.find(name) == registeredUsers.end()) {
+        registeredUsers[name] = { name, password, clientSocket, true, -1 };
+        sendMessage(clientSocket, 101);
         std::cout << "[SUCCESS] User " << name << " registered and logged in successfully." << std::endl;
     }
     else {
-        sendMessage(clientSocket, 102);  // Fehlgeschlagene Registrierung senden (Benutzername bereits vergeben)
+        sendMessage(clientSocket, 102);
         std::cout << "[ERROR] Registration failed, user " << name << " already exists." << std::endl;
     }
 }
 
-// Funktion zum Einloggen eines Benutzers
 void handleLogin(SOCKET clientSocket, const std::vector<char>& message) {
     int nameLength = message[5];
     std::string name(message.begin() + 6, message.begin() + 6 + nameLength);
     int passwordLength = message[6 + nameLength];
     std::string password(message.begin() + 7 + nameLength, message.begin() + 7 + nameLength + passwordLength);
 
-    auto it = registeredUsers.find(name);  // Benutzer im Speicher suchen
-    if (it != registeredUsers.end() && it->second.password == password) {  // Passwort überprüfen
-        if (it->second.loggedIn) {  // Falls Benutzer bereits eingeloggt ist
-            sendMessage(clientSocket, 105);  // Fehlermeldung senden
+    auto it = registeredUsers.find(name);
+    if (it != registeredUsers.end() && it->second.password == password) {
+        if (it->second.loggedIn) {
+            sendMessage(clientSocket, 105);
             std::cout << "[ERROR] User " << name << " is already logged in." << std::endl;
         }
         else {
-            it->second.socket = clientSocket;  // Benutzer-Socket aktualisieren
-            it->second.loggedIn = true;  // Als eingeloggt markieren
-            sendMessage(clientSocket, 104);  // Erfolgreichen Login senden
+            it->second.socket = clientSocket;
+            it->second.loggedIn = true;
+            sendMessage(clientSocket, 104);
             std::cout << "[SUCCESS] User " << name << " logged in successfully." << std::endl;
         }
     }
     else {
-        sendMessage(clientSocket, 105);  // Fehlgeschlagenen Login senden (falsches Passwort)
+        sendMessage(clientSocket, 105);
         std::cout << "[ERROR] Login failed for user " << name << std::endl;
     }
 }
 
-// Funktion zum Ausloggen eines Benutzers
 void handleLogout(SOCKET clientSocket) {
     for (auto& pair : registeredUsers) {
         User& user = pair.second;
-        if (user.socket == clientSocket && user.loggedIn) {  // Benutzer finden, der ausgeloggt werden soll
-            user.loggedIn = false;  // Als ausgeloggt markieren
-            user.currentSession = -1;  // Sitzung zurücksetzen
+        if (user.socket == clientSocket && user.loggedIn) {
+            user.loggedIn = false;
+            user.currentSession = -1;
             std::cout << "[INFO] User " << user.name << " logged out successfully." << std::endl;
-            sendMessage(clientSocket, 104);  // Erfolgreiches Ausloggen bestätigen
+            sendMessage(clientSocket, 104);
             return;
         }
     }
     std::cout << "[ERROR] Logout failed: user not found or already logged out." << std::endl;
 }
 
-// Funktion zum Senden der Sitzungsliste an den Client
 void handleSessionListRequest(SOCKET clientSocket) {
     std::vector<char> sessionListData;
     for (const auto& session : activeSessions) {
-        sessionListData.insert(sessionListData.end(), (char*)&session.second.sessionNumber, (char*)&session.second.sessionNumber + 4);  // Sitzungsnummer hinzufügen
-        sessionListData.push_back(static_cast<char>(session.second.player2.empty() ? 0 : session.second.player2.size()));  // Länge des Gegenspielernamens
-        sessionListData.push_back(static_cast<char>(session.second.passwordProtected));  // Passwortschutz hinzufügen
+        if (session.second.player2.empty()) {  // Only show sessions with one player
+            sessionListData.insert(sessionListData.end(), (char*)&session.second.sessionNumber, (char*)&session.second.sessionNumber + 4);
+            sessionListData.push_back(static_cast<char>(session.second.player2.empty() ? 0 : session.second.player2.size()));
+            sessionListData.push_back(static_cast<char>(session.second.passwordProtected));
+        }
     }
-    sendMessage(clientSocket, 103, sessionListData);  // Sitzungsliste an den Client senden
-    std::cout << "[INFO] Sent session list with " << activeSessions.size() << " active sessions." << std::endl;
+    sendMessage(clientSocket, 103, sessionListData);
+    std::cout << "[INFO] Sent session list with " << sessionListData.size() / 6 << " available sessions." << std::endl;
 }
 
-// Funktion zum Erstellen einer neuen Sitzung
 void handleCreateSession(SOCKET clientSocket, const std::vector<char>& message) {
-    int passwordLength = message[5];  // Länge des Sitzungspassworts
-    std::string password(message.begin() + 6, message.begin() + 6 + passwordLength);  // Sitzungspasswort
-    //system("pause");
-    // Überprüfung, ob die maximale Anzahl an Sitzungen erreicht ist
+    int passwordLength = message[5];
+    std::string password(message.begin() + 6, message.begin() + 6 + passwordLength);
+
     if (activeSessions.size() >= SESSION_LIMIT) {
-        std::vector<char> denyData = { 4 };  // Sitzungslimit erreicht
-        sendMessage(clientSocket, 112, denyData);  // Zugriff verweigern
+        std::vector<char> denyData = { 4 };
+        sendMessage(clientSocket, 112, denyData);
         std::cout << "[ERROR] Session limit reached, can't create new session." << std::endl;
         return;
     }
 
-    // Sitzungszähler erhöhen
     sessionCounter++;
     std::string playerName;
 
-    // Suche nach dem Namen des Spielers, der die Sitzung erstellt
     for (const auto& pair : registeredUsers) {
         const std::string& name = pair.first;
         const User& user = pair.second;
@@ -191,33 +180,25 @@ void handleCreateSession(SOCKET clientSocket, const std::vector<char>& message) 
         }
     }
 
-    // Neue Sitzung erstellen und speichern
     Session newSession = { sessionCounter, playerName, "", !password.empty(), password };
     activeSessions[sessionCounter] = newSession;
 
-    // Antwort an den Client vorbereiten (Erfolgsmeldung)
     std::vector<char> accessData(13, 0);
-    *(int*)accessData.data() = sessionCounter;  // Sitzungsnummer
-    accessData[4] = 0;  // Noch kein Gegenspieler
-    accessData[5] = 1;  // Spieler 1 ist am Zug
-    std::fill(accessData.begin() + 6, accessData.end(), '-');  // Spielfeld initialisieren
+    *(int*)accessData.data() = sessionCounter;
+    accessData[4] = 0;
+    accessData[5] = 1;
+    std::fill(accessData.begin() + 6, accessData.end(), '-');
 
-    // Erfolgreiche Sitzungsfreigabe an den Client senden
     sendMessage(clientSocket, 108, accessData);
 
     std::cout << "[SUCCESS] Created new session with ID: " << sessionCounter << std::endl;
 }
 
 void handleJoinSession(SOCKET clientSocket, const std::vector<char>& message) {
-    int sessionNumber = message[5];  // Sitzungsnummer auslesen (assuming it starts at message[1])
-    int passwordLength = message[6];  // Länge des Passworts
+    int sessionNumber = message[5];
+    int passwordLength = message[6];
+    std::string sessionPassword(message.begin() + 7, message.begin() + 7 + passwordLength);
 
-    std::cout << "[INFO] session num " << sessionNumber << std::endl;
-    std::cout << "[INFO] pw len " << passwordLength << std::endl;
-    
-    std::string sessionPassword(message.begin() + 7, message.begin() + 7 + passwordLength);  // Passwort
-
-    // Suche nach dem Namen des Spielers, der die Sitzung beitreten möchte
     std::string playerName;
     for (const auto& pair : registeredUsers) {
         const User& user = pair.second;
@@ -232,159 +213,233 @@ void handleJoinSession(SOCKET clientSocket, const std::vector<char>& message) {
         return;
     }
 
-    // Überprüfen, ob die Sitzung existiert
     auto sessionIt = activeSessions.find(sessionNumber);
     if (sessionIt == activeSessions.end()) {
-        std::vector<char> denyData = { 0 };  // Game does not exist
-        sendMessage(clientSocket, 112, denyData);  // Zugriff verweigern
+        std::vector<char> denyData = { 0 };
+        sendMessage(clientSocket, 112, denyData);
         std::cout << "[ERROR] Session " << sessionNumber << " does not exist." << std::endl;
         return;
     }
 
     Session& session = sessionIt->second;
 
-    // Überprüfen, ob die Sitzung bereits voll ist
     if (!session.player2.empty()) {
-        std::vector<char> denyData = { 1 };  // Game is full
-        sendMessage(clientSocket, 112, denyData);  // Zugriff verweigern
+        std::vector<char> denyData = { 1 };
+        sendMessage(clientSocket, 112, denyData);
         std::cout << "[ERROR] Session " << sessionNumber << " is full." << std::endl;
         return;
     }
 
-    // Überprüfen, ob das Passwort korrekt ist (falls passwortgeschützt)
     if (session.passwordProtected && session.password != sessionPassword) {
-        std::vector<char> denyData = { 2 };  // Wrong password
-        sendMessage(clientSocket, 112, denyData);  // Zugriff verweigern
+        std::vector<char> denyData = { 2 };
+        sendMessage(clientSocket, 112, denyData);
         std::cout << "[ERROR] Incorrect password for session " << sessionNumber << "." << std::endl;
         return;
     }
 
-    // Überprüfen, ob der Spieler bereits in der Sitzung ist
     if (session.player1 == playerName || session.player2 == playerName) {
-        std::vector<char> denyData = { 3 };  // Already in session
-        sendMessage(clientSocket, 112, denyData);  // Zugriff verweigern
+        std::vector<char> denyData = { 3 };
+        sendMessage(clientSocket, 112, denyData);
         std::cout << "[ERROR] User " << playerName << " is already in session " << sessionNumber << "." << std::endl;
         return;
     }
 
-    // Benutzer als zweiten Spieler in der Sitzung hinzufügen
     session.player2 = playerName;
+    session.gameStarted = true;
 
-    // Erfolgreiche Sitzungsfreigabe an den Client senden
     std::vector<char> accessData(14 + session.player1.size(), 0);
-    accessData[0] = sessionNumber;
-    accessData[1] = session.player1.size();
-    std::copy(session.player1.begin(), session.player1.end(), accessData.begin() + 2);  // Spezielle Daten hinzufügen
-    
-    accessData[2 + session.player1.size()] = session.board[0];
-    accessData[3 + session.player1.size()] = session.board[1];
-    accessData[4 + session.player1.size()] = session.board[2];
-    accessData[5 + session.player1.size()] = session.board[3];
-    accessData[6 + session.player1.size()] = session.board[4];
-    accessData[7 + session.player1.size()] = session.board[5];
-    accessData[8 + session.player1.size()] = session.board[6];
-    accessData[9 + session.player1.size()] = session.board[7];
-    accessData[10 + session.player1.size()] = session.board[8];
+    accessData[0] = static_cast<char>(sessionNumber);
+    accessData[1] = static_cast<char>(session.player1.size());
+    std::copy(session.player1.begin(), session.player1.end(), accessData.begin() + 2);
+    std::copy(std::begin(session.board), std::end(session.board), accessData.begin() + 2 + session.player1.size());
+    accessData[2 + session.player1.size() + 9] = 0;  // isPlayersTurn = false for player 2
 
+    sendMessage(clientSocket, 108, accessData);
 
-    sendMessage(clientSocket, 108, accessData);  // Erfolgreiche Sitzungsfreigabe senden
+    // Notify player 1 that the game has started
+    std::vector<char> player1AccessData(14 + session.player2.size(), 0);
+    player1AccessData[0] = static_cast<char>(sessionNumber);
+    player1AccessData[1] = static_cast<char>(session.player2.size());
+    std::copy(session.player2.begin(), session.player2.end(), player1AccessData.begin() + 2);
+    std::copy(std::begin(session.board), std::end(session.board), player1AccessData.begin() + 2 + session.player2.size());
+    player1AccessData[2 + session.player2.size() + 9] = 1;  // isPlayersTurn = true for player 1
+
+    for (const auto& pair : registeredUsers) {
+        if (pair.second.name == session.player1) {
+            sendMessage(pair.second.socket, 108, player1AccessData);
+            break;
+        }
+    }
+
     std::cout << "[SUCCESS] User " << playerName << " joined session " << sessionNumber << "." << std::endl;
 }
 
+bool checkWin(const char* board) {
+    const int winPatterns[8][3] = {
+        {0, 1, 2}, {3, 4, 5}, {6, 7, 8},  // Rows
+        {0, 3, 6}, {1, 4, 7}, {2, 5, 8},  // Columns
+        {0, 4, 8}, {2, 4, 6}              // Diagonals
+    };
 
-
-// Funktion zur Verarbeitung von Nachrichten vom Client
-void processClientMessage(SOCKET clientSocket, const std::vector<char>& message) {
-    int messageCode = message[4];  // Nachrichtencode auslesen
-    switch (messageCode) {
-    case 1:
-        handleRegister(clientSocket, message);  // Registrierung
-        break;
-    case 3:
-        handleLogin(clientSocket, message);  // Login
-        break;
-    case 4:
-        handleLogout(clientSocket);  // Logout
-        break;
-    case 2:
-        handleSessionListRequest(clientSocket);  // Sitzungsliste anfordern
-        break;
-    case 5:
-        handleCreateSession(clientSocket, message);  // Sitzung erstellen
-        break;
-    case 6:
-        handleJoinSession(clientSocket, message);  // Sitzung erstellen
-        break;
-    default:
-        std::cout << "[ERROR] Unknown message code: " << messageCode << std::endl;
+    for (int i = 0; i < 8; ++i) {
+        if (board[winPatterns[i][0]] != 0 &&
+            board[winPatterns[i][0]] == board[winPatterns[i][1]] &&
+            board[winPatterns[i][0]] == board[winPatterns[i][2]]) {
+            return true;
+        }
     }
+    return false;
 }
 
-// Funktion zur Verarbeitung von Nachrichten aller Clients
-void handleClientMessages() {
-    for (auto& client : clientBuffers) {
-        SOCKET clientSocket = client.first;
-        std::vector<char>& buffer = client.second;
+bool checkDraw(const char* board) {
+    return std::all_of(board, board + 9, [](char c) { return c != 0; });
+}
 
-        while (buffer.size() >= 5) {  // Solange Nachrichten vorhanden sind
-            int messageLength = *(int*)buffer.data();  // Nachrichtengröße auslesen
-            if (buffer.size() >= messageLength + 4) {
-                std::vector<char> message(buffer.begin(), buffer.begin() + messageLength + 4);  // Nachricht extrahieren
-                int messageCode = message[4];
-                std::cout << "[INFO] processing message with code: " << messageCode << std::endl;
-                processClientMessage(clientSocket, message);  // Nachricht verarbeiten
-                buffer.erase(buffer.begin(), buffer.begin() + messageLength + 4);  // Nachricht aus dem Puffer entfernen
-            }
-            else {
-                break;
-            }
+void sendGameState(const Session& session, char messageCode) {
+    std::vector<char> stateData(14 + session.player2.size(), 0);
+    stateData[0] = static_cast<char>(session.sessionNumber);
+    stateData[1] = static_cast<char>(session.player2.size());
+    std::copy(session.player2.begin(), session.player2.end(), stateData.begin() + 2);
+    std::copy(std::begin(session.board), std::end(session.board), stateData.begin() + 2 + session.player2.size());
+    stateData[2 + session.player2.size() + 9] = session.isPlayer1Turn ? 1 : 0;
+
+    for (const auto& pair : registeredUsers) {
+        if (pair.second.name == session.player1) {
+            sendMessage(pair.second.socket, messageCode, stateData);
+            break;
+        }
+    }
+
+    stateData[1] = static_cast<char>(session.player1.size());
+    std::copy(session.player1.begin(), session.player1.end(), stateData.begin() + 2);
+    stateData[2 + session.player1.size() + 9] = session.isPlayer1Turn ? 0 : 1;
+
+    for (const auto& pair : registeredUsers) {
+        if (pair.second.name == session.player2) {
+            sendMessage(pair.second.socket, messageCode, stateData);
+            break;
         }
     }
 }
 
+void handleMakeMove(SOCKET clientSocket, const std::vector<char>& message) {
+    int sessionNumber = *(int*)(message.data() + 5);
+    int coordinate = message[9];
+
+    auto sessionIt = activeSessions.find(sessionNumber);
+    if (sessionIt == activeSessions.end()) {
+        std::cout << "[ERROR] Session " << sessionNumber << " not found." << std::endl;
+        return;
+    }
+
+    Session& session = sessionIt->second;
+    std::string playerName;
+
+    for (const auto& pair : registeredUsers) {
+        if (pair.second.socket == clientSocket) {
+            playerName = pair.first;
+            break;
+        }
+    }
+
+    bool isPlayer1 = (playerName == session.player1);
+    if ((isPlayer1 && !session.isPlayer1Turn) || (!isPlayer1 && session.isPlayer1Turn)) {
+        std::cout << "[ERROR] Not your turn." << std::endl;
+        return;
+    }
+
+    if (coordinate < 0 || coordinate >= 9 || session.board[coordinate] != 0) {
+        std::cout << "[ERROR] Invalid move." << std::endl;
+        return;
+    }
+
+    session.board[coordinate] = isPlayer1 ? 'X' : 'O';
+    session.isPlayer1Turn = !session.isPlayer1Turn;
+
+    if (checkWin(session.board)) {
+        sendGameState(session, 110);  // Game over
+        std::cout << "[INFO] Player " << playerName << " won the game in session " << sessionNumber << std::endl;
+        activeSessions.erase(sessionIt);
+    }
+    else if (checkDraw(session.board)) {
+        sendGameState(session, 111);  // Draw
+        std::cout << "[INFO] Game ended in a draw in session " << sessionNumber << std::endl;
+        activeSessions.erase(sessionIt);
+    }
+    else {
+        sendGameState(session, 109);  // Update game state
+    }
+}
 int main() {
-    initWinsock();  // Winsock initialisieren
-    SOCKET listener = createListenerSocket();  // Listener-Socket erstellen
+    initWinsock();
+    SOCKET listener = createListenerSocket();
 
     fd_set master;
     FD_ZERO(&master);
-    FD_SET(listener, &master);  // Listener-Socket zu fd_set hinzufügen
+    FD_SET(listener, &master);
 
     while (true) {
         fd_set copy = master;
-        int socketCount = select(0, &copy, nullptr, nullptr, nullptr);  // Auf eingehende Verbindungen warten
+        int socketCount = select(0, &copy, nullptr, nullptr, nullptr);
 
         for (int i = 0; i < socketCount; i++) {
             SOCKET sock = copy.fd_array[i];
 
-            if (sock == listener) {  // Neue Verbindung annehmen
+            if (sock == listener) {
                 SOCKET client = accept(listener, nullptr, nullptr);
-                FD_SET(client, &master);  // Client-Socket zu fd_set hinzufügen
-                clientBuffers[client] = std::vector<char>();  // Nachrichtenpuffer für den neuen Client erstellen
+                FD_SET(client, &master);
+                clientBuffers[client] = std::vector<char>();
                 std::cout << "[INFO] New client connected." << std::endl;
             }
             else {
                 char buf[BUFFER_SIZE];
-                int bytesReceived = recv(sock, buf, BUFFER_SIZE, 0);  // Nachricht empfangen
+                int bytesReceived = recv(sock, buf, BUFFER_SIZE, 0);
 
-                if (bytesReceived <= 0) {  // Client hat die Verbindung geschlossen
+                if (bytesReceived <= 0) {
                     closesocket(sock);
-                    FD_CLR(sock, &master);  // Client-Socket aus fd_set entfernen
-                    clientBuffers.erase(sock);  // Nachrichtenpuffer löschen
+                    FD_CLR(sock, &master);
+                    clientBuffers.erase(sock);
                     std::cout << "[INFO] Client disconnected." << std::endl;
                 }
                 else {
                     std::vector<char>& clientBuffer = clientBuffers[sock];
-                    clientBuffer.insert(clientBuffer.end(), buf, buf + bytesReceived);  // Nachricht zum Puffer hinzufügen
+                    clientBuffer.insert(clientBuffer.end(), buf, buf + bytesReceived);
                 }
             }
         }
 
-        handleClientMessages();  // Nachrichten aller Clients verarbeiten
+        // Verarbeite die Nachrichten in den Clientpuffern
+        for (auto& client : clientBuffers) {
+            SOCKET clientSocket = client.first;
+            std::vector<char>& buffer = client.second;
+
+            while (buffer.size() >= 5) {
+                int messageLength = *(int*)buffer.data();
+                if (buffer.size() >= messageLength + 4) {
+                    std::vector<char> message(buffer.begin(), buffer.begin() + messageLength + 4);
+                    int messageCode = message[4];
+
+                    switch (messageCode) {
+                    case 1: handleRegister(clientSocket, message); break;
+                    case 2: handleSessionListRequest(clientSocket); break;
+                    case 3: handleLogin(clientSocket, message); break;
+                    case 4: handleLogout(clientSocket); break;
+                    case 5: handleCreateSession(clientSocket, message); break;
+                    case 6: handleJoinSession(clientSocket, message); break;
+                    case 8: handleMakeMove(clientSocket, message); break;
+                    default: std::cout << "[ERROR] Unknown message code: " << messageCode << std::endl;
+                    }
+
+                    buffer.erase(buffer.begin(), buffer.begin() + messageLength + 4);
+                }
+                else {
+                    break;
+                }
+            }
+        }
     }
 
-    FD_CLR(listener, &master);
-    closesocket(listener);  // Listener-Socket schließen
-    WSACleanup();  // Winsock aufräumen
+    closesocket(listener);
+    WSACleanup();
     return 0;
 }
