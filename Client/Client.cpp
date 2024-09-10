@@ -216,9 +216,19 @@ void handleMakeMove(SOCKET sock) {
         return;
     }
 
-    int move;
-    std::cout << "Enter your move (0-8): ";
-    std::cin >> move;
+    std::string move;
+    bool isValid = false;
+
+    while (!isValid) {
+        std::cout << "Enter your move (0-8): ";
+        std::cout << "\033[K";
+        std::cin >> move;
+
+        // Check if input contains only digits
+        isValid = std::all_of(move.begin(), move.end(), ::isdigit);
+        
+        std::cout << "\033[A\033[G";
+    }
 /*
     if (move < 0 || move > 8) {
         std::cout << "Invalid move. Please enter a number between 0 and 8." << std::endl;
@@ -229,7 +239,7 @@ void handleMakeMove(SOCKET sock) {
     *(int*)message.data() = 6;  // Message length
     message[4] = 8;  // Message code for makeMove
     *(int*)(message.data() + 5) = currentSession;  // Session number
-    message[9] = move;  // Move coordinate
+    message[9] = std::stoi(move);  // Move coordinate
 
     send(sock, message.data(), static_cast<int>(message.size()), 0);
 }
