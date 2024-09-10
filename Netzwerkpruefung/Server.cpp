@@ -335,6 +335,7 @@ void handleMakeMove(SOCKET clientSocket, const std::vector<char>& message) {
     Session& session = sessionIt->second;
     std::string playerName;
 
+    // Find the player making the move
     for (const auto& pair : registeredUsers) {
         if (pair.second.socket == clientSocket) {
             playerName = pair.first;
@@ -348,24 +349,32 @@ void handleMakeMove(SOCKET clientSocket, const std::vector<char>& message) {
         return;
     }
 
+    // Check if the move is valid
     if (coordinate < 0 || coordinate >= 9 || session.board[coordinate] != 0) {
         std::cout << "[ERROR] Invalid move." << std::endl;
         return;
     }
 
+    // Update the board
     session.board[coordinate] = isPlayer1 ? 'X' : 'O';
     session.isPlayer1Turn = !session.isPlayer1Turn;
 
+    // Display the updated board on the server side
+   // displayBoard(session.board);
+
+    // Check if someone won the game
     if (checkWin(session.board)) {
         sendGameState(session, 110);  // Game over
         std::cout << "[INFO] Player " << playerName << " won the game in session " << sessionNumber << std::endl;
-        activeSessions.erase(sessionIt);
+        activeSessions.erase(sessionIt);  // Remove session after game over
     }
+    // Check if the game is a draw
     else if (checkDraw(session.board)) {
-        sendGameState(session, 111);  // Draw
+        sendGameState(session, 111);  // Game draw
         std::cout << "[INFO] Game ended in a draw in session " << sessionNumber << std::endl;
-        activeSessions.erase(sessionIt);
+        activeSessions.erase(sessionIt);  // Remove session after draw
     }
+    // Continue the game if it's not over
     else {
         sendGameState(session, 109);  // Update game state
     }

@@ -18,7 +18,7 @@ void clearScreen() {
 }
 
 void printMenu() {
-    clearScreen();
+    //clearScreen();
     std::cout << "Tic Tac Toe Game Menu\n";
 
     if (!loggedIn) {
@@ -43,14 +43,17 @@ void printMenu() {
     std::cout << "0. Exit\n";
 }
 
-void displayBoard(const std::vector<char>& board) {
+void displayBoard(const char board[9]) {
+    std::cout << "Current Board:" << std::endl;
     for (int i = 0; i < 9; ++i) {
-        if (i % 3 == 0) std::cout << std::endl;
-        char cell = board[i] == 'X' ? 'X' : (board[i] == 'O' ? 'O' : '-');
-        std::cout << cell << " ";
+        if (i % 3 == 0 && i != 0) std::cout << "\n-----------\n";
+        char cell = board[i] == 0 ? ' ' : board[i];  // Empty spots will be displayed as ' '
+        std::cout << " " << cell;
+        if (i % 3 != 2) std::cout << " |";
     }
     std::cout << std::endl;
 }
+
 
 void handleSessionAccess(const char* buffer) {
     int sessionNumber = buffer[0];
@@ -67,11 +70,15 @@ void handleSessionAccess(const char* buffer) {
     clearScreen();
     std::cout << "Session Number: " << sessionNumber << std::endl;
     std::cout << "Game against: " << enemyName << std::endl;
-    displayBoard(board);
+
+    // Display the current board
+    displayBoard(board.data());
+
     std::cout << (isPlayersTurn ? "It's your turn!" : "Waiting for opponent's move...") << std::endl;
 
     currentSession = sessionNumber;
 }
+
 
 void requestSessionList(SOCKET sock) {
     char buffer[5] = { 0 };
@@ -80,29 +87,7 @@ void requestSessionList(SOCKET sock) {
     send(sock, buffer, 5, 0);
 }
 
-void handleMakeMove(SOCKET sock) {
-    if (currentSession == -1) {
-        std::cout << "You are not in a session. Join a session first." << std::endl;
-        return;
-    }
 
-    int move;
-    std::cout << "Enter your move (0-8): ";
-    std::cin >> move;
-
-    if (move < 0 || move > 8) {
-        std::cout << "Invalid move. Please enter a number between 0 and 8." << std::endl;
-        return;
-    }
-
-    std::vector<char> message(10, 0);
-    *(int*)message.data() = 6;  // Message length
-    message[4] = 8;  // Message code for makeMove
-    *(int*)(message.data() + 5) = currentSession;  // Session number
-    message[9] = move;  // Move coordinate
-
-    send(sock, message.data(), static_cast<int>(message.size()), 0);
-}
 
 void handleServerResponse(SOCKET sock) {
     char recvBuffer[512];
@@ -152,6 +137,32 @@ void handleServerResponse(SOCKET sock) {
     }
 }
 
+void handleMakeMove(SOCKET sock) {
+    if (currentSession == -1) {
+        std::cout << "You are not in a session. Join a session first." << std::endl;
+        return;
+    }
+
+    int move;
+    std::cout << "Enter your move (0-8): ";
+    std::cin >> move;
+
+    if (move < 0 || move > 8) {
+        std::cout << "Invalid move. Please enter a number between 0 and 8." << std::endl;
+        return;
+    }
+
+    std::vector<char> message(10, 0);
+    *(int*)message.data() = 6;  // Message length
+    message[4] = 8;  // Message code for makeMove
+    *(int*)(message.data() + 5) = currentSession;  // Session number
+    message[9] = move;  // Move coordinate
+
+    send(sock, message.data(), static_cast<int>(message.size()), 0);
+
+    // Wait for server response to update the board after the move
+    handleServerResponse(sock);
+}
 void handleClient(SOCKET sock) {
     int choice;
 
