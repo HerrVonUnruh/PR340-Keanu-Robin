@@ -213,12 +213,12 @@ void handleMakeMove(SOCKET sock) {
     int move;
     std::cout << "Enter your move (0-8): ";
     std::cin >> move;
-
+/*
     if (move < 0 || move > 8) {
         std::cout << "Invalid move. Please enter a number between 0 and 8." << std::endl;
         return;
     }
-
+*/
     std::vector<char> message(10, 0);
     *(int*)message.data() = 6;  // Message length
     message[4] = 8;  // Message code for makeMove

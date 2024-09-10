@@ -352,12 +352,15 @@ void handleMakeMove(SOCKET clientSocket, const std::vector<char>& message) {
     bool isPlayer1 = (playerName == session.player1);
     if ((isPlayer1 && !session.isPlayer1Turn) || (!isPlayer1 && session.isPlayer1Turn)) {
         std::cout << "[ERROR] Not your turn." << std::endl;
+        sendGameState(session, 109);  // Update game state
         return;
     }
 
     // Check if the move is valid
     if (coordinate < 0 || coordinate >= 9 || session.board[coordinate] != 0) {
         std::cout << "[ERROR] Invalid move." << std::endl;
+        sendGameState(session, 109);  // Update game state
+
         return;
     }
 
