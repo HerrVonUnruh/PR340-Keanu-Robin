@@ -18,6 +18,8 @@ int currentSession = -1;
 std::vector<char> lastBuffer;
 std::vector<char> evenLasterBuffer;
 bool myTurn = false;
+std::string opponentName;
+
 
 // Function declarations
 void clearScreen();
@@ -95,6 +97,7 @@ void handleSessionAccess(const char* buffer, SOCKET sock) {
     std::cout << (isPlayersTurn ? "It's your turn!" : "Waiting for opponent's move...") << std::endl;
 
     currentSession = sessionNumber;
+    opponentName = enemyName;
 }
 
 void requestSessionList(SOCKET sock) {
@@ -183,10 +186,12 @@ void handleServerResponse(SOCKET sock) {
             if (messageCode == 110) {
                 std::cout << "Game Over! You " << (recvBuffer[2 + recvBuffer[1] + 9] == 1 ? "won!" : "lost!") << std::endl;
                 currentSession = -1;
+                opponentName = "";
             }
             else if (messageCode == 111) {
                 std::cout << "Game Over! It's a draw!" << std::endl;
                 currentSession = -1;
+                opponentName = "";
             }
             break;
         case 112: // Session Access Denied
@@ -428,6 +433,7 @@ void handleClient(SOCKET sock) {
                         loggedIn = false;
                         sessionList.clear();  // Sitzungsliste leeren
                         currentSession = -1;  // Setze die aktuelle Sitzung zurück
+                        opponentName = "";
                         clearScreen();
                         std::cout << "Logged out successfully.\n";
                         continue;
@@ -517,14 +523,17 @@ void handleClient(SOCKET sock) {
         }
         else
         {
-            if (lastBuffer != evenLasterBuffer)
+            if (opponentName != "")
             {
-                handleSessionAccess(lastBuffer.data(), sock);
-            }
+                if (lastBuffer != evenLasterBuffer)
+                {
+                    handleSessionAccess(lastBuffer.data(), sock);
+                }
 
-            if (myTurn)
-            {
-                handleMakeMove(sock);
+                if (myTurn)
+                {
+                    handleMakeMove(sock);
+                }
             }
 
             handleServerResponse(sock);
