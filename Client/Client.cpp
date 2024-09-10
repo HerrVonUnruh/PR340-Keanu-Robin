@@ -150,53 +150,59 @@ void displaySessionList(const char* data, int length) {
 
 void handleServerResponse(SOCKET sock) {
     char recvBuffer[512];
-    int bytesReceived = recv(sock, recvBuffer, 512, 0);
-    if (bytesReceived > 0) {
-        char messageCode = recvBuffer[4];
-        int offset;  // Deklaration außerhalb des switch
-        switch (messageCode) {
-        case 101: // Erfolgreiche Registrierung
-        case 104: // Erfolgreicher Login
-            loggedIn = true;
-            std::cout << "Login successful!" << std::endl;
-            break;
-        case 103: // Session List
-            offset = 5;  // Initialisierung innerhalb des case
-            sessionList.clear();
-            while (offset < bytesReceived) {
-                int sessionNumber = *(int*)(recvBuffer + offset);
-                offset += 4;
-                int enemyNameLength = recvBuffer[offset++];
-                bool passwordProtected = recvBuffer[offset++];
+    bool gotData = false;
 
-                std::string sessionInfo = "Session " + std::to_string(sessionNumber);
-                sessionInfo += enemyNameLength == 0 ? " (Waiting for player)" : " (Enemy)";
-                sessionInfo += passwordProtected ? " [Password Protected]" : " [Open]";
-                sessionList.push_back(sessionInfo);
-            }
-            break;
-        case 108: // Session Access
-        case 109: // Update Session
-        case 110: // Game Over
-        case 111: // Draw
-            lastBuffer.resize(bytesReceived); // Resize vector to hold the received data
-            std::memcpy(lastBuffer.data(), recvBuffer, bytesReceived);
+    while (!gotData)
+    {
+        int bytesReceived = recv(sock, recvBuffer, 512, 0);
+        if (bytesReceived > 0) {
+            gotData = true;
+            char messageCode = recvBuffer[4];
+            int offset;  // Deklaration außerhalb des switch
+            switch (messageCode) {
+            case 101: // Erfolgreiche Registrierung
+            case 104: // Erfolgreicher Login
+                loggedIn = true;
+                std::cout << "Login successful!" << std::endl;
+                break;
+            case 103: // Session List
+                offset = 5;  // Initialisierung innerhalb des case
+                sessionList.clear();
+                while (offset < bytesReceived) {
+                    int sessionNumber = *(int*)(recvBuffer + offset);
+                    offset += 4;
+                    int enemyNameLength = recvBuffer[offset++];
+                    bool passwordProtected = recvBuffer[offset++];
 
-            handleSessionAccess(recvBuffer + 5, sock);
-            if (messageCode == 110) {
-                std::cout << "Game Over! You " << (recvBuffer[2 + recvBuffer[1] + 9] == 1 ? "won!" : "lost!") << std::endl;
-                currentSession = -1;
-                opponentName = "";
+                    std::string sessionInfo = "Session " + std::to_string(sessionNumber);
+                    sessionInfo += enemyNameLength == 0 ? " (Waiting for player)" : " (Enemy)";
+                    sessionInfo += passwordProtected ? " [Password Protected]" : " [Open]";
+                    sessionList.push_back(sessionInfo);
+                }
+                break;
+            case 108: // Session Access
+            case 109: // Update Session
+            case 110: // Game Over
+            case 111: // Draw
+                lastBuffer.resize(bytesReceived); // Resize vector to hold the received data
+                std::memcpy(lastBuffer.data(), recvBuffer, bytesReceived);
+
+                handleSessionAccess(recvBuffer + 5, sock);
+                if (messageCode == 110) {
+                    std::cout << "Game Over! You " << (recvBuffer[2 + recvBuffer[1] + 9] == 1 ? "won!" : "lost!") << std::endl;
+                    currentSession = -1;
+                    opponentName = "";
+                }
+                else if (messageCode == 111) {
+                    std::cout << "Game Over! It's a draw!" << std::endl;
+                    currentSession = -1;
+                    opponentName = "";
+                }
+                break;
+            case 112: // Session Access Denied
+                std::cout << "Error: Unable to access session." << std::endl;
+                break;
             }
-            else if (messageCode == 111) {
-                std::cout << "Game Over! It's a draw!" << std::endl;
-                currentSession = -1;
-                opponentName = "";
-            }
-            break;
-        case 112: // Session Access Denied
-            std::cout << "Error: Unable to access session." << std::endl;
-            break;
         }
     }
 }
