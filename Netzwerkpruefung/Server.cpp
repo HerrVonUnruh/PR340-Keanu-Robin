@@ -148,7 +148,13 @@ void handleSessionListRequest(SOCKET clientSocket) {
     for (const auto& session : activeSessions) {
         if (session.second.player2.empty()) {  // Only show sessions with one player
             sessionListData.insert(sessionListData.end(), (char*)&session.second.sessionNumber, (char*)&session.second.sessionNumber + 4);
-            sessionListData.push_back(static_cast<char>(session.second.player2.empty() ? 0 : session.second.player2.size()));
+
+            // Add the owner name length and the owner name
+            char ownerNameLength = static_cast<char>(session.second.player1.size());
+            sessionListData.push_back(ownerNameLength);
+            sessionListData.insert(sessionListData.end(), session.second.player1.begin(), session.second.player1.end());
+
+            // Add password protection flag
             sessionListData.push_back(static_cast<char>(session.second.passwordProtected));
         }
     }
@@ -191,7 +197,7 @@ void handleCreateSession(SOCKET clientSocket, const std::vector<char>& message) 
 
     sendMessage(clientSocket, 108, accessData);
 
-    std::cout << "[SUCCESS] Created new session with ID: " << sessionCounter << std::endl;
+    std::cout << "[SUCCESS] User " << playerName << " Created new session with ID: " << sessionCounter << std::endl;
 }
 
 void handleJoinSession(SOCKET clientSocket, const std::vector<char>& message) {

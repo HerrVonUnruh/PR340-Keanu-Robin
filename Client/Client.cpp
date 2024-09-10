@@ -114,12 +114,14 @@ void displaySessionList(const char* data, int length) {
     sessionList.clear();
     int offset = 0;
     while (offset < length) {
-        int sessionNumber = *(int*)(data + offset);
+        int sessionNumber = *(int*)(data + offset); // Get the session number
         offset += 4;
-        int ownerNameLength = data[offset++];
-        std::string ownerName(data + offset, ownerNameLength);
+
+        int ownerNameLength = static_cast<unsigned char>(data[offset++]); // Get the length of the owner name
+        std::string ownerName(data + offset, ownerNameLength); // Get the owner name
         offset += ownerNameLength;
-        bool passwordProtected = data[offset++];
+
+        bool passwordProtected = data[offset++]; // Get the password protection flag
 
         std::string sessionInfo = "Session ID: " + std::to_string(sessionNumber) +
             " | Owner: " + ownerName +
@@ -137,6 +139,7 @@ void displaySessionList(const char* data, int length) {
         }
     }
 }
+
 
 void handleServerResponse(SOCKET sock) {
     char recvBuffer[512];

@@ -1,2 +1,2 @@
-C:\Users\robin\Desktop\4. Semester\Pruefungen\PR340_Netzwerkpruefung\PR340-Keanu-Robin\Client
-C:\Users\robin\Desktop\4. Semester\Pruefungen\PR340_Netzwerkpruefung\PR340-Keanu-Robin\Netzwerkpruefung
+"C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Client"
+"C:\Users\keanu\Documents\GitHub\PR340-Keanu-Robin\Netzwerkpruefung"
