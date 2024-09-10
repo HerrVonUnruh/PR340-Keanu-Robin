@@ -15,6 +15,9 @@ bool loggedIn = false;
 std::string playerName;
 std::vector<std::string> sessionList;
 int currentSession = -1;
+std::vector<char> lastBuffer;
+std::vector<char> evenLasterBuffer;
+bool myTurn = false;
 
 // Function declarations
 void clearScreen();
@@ -45,7 +48,7 @@ void printMenu() {
         std::cout << "4. Create Session\n";
         std::cout << "5. Join Session\n";
         std::cout << "6. Logout\n";
-        std::cout << "7. Make Move\n";
+        //std::cout << "7. Make Move\n";
 
         if (!sessionList.empty()) {
             std::cout << "\nAvailable Sessions:\n";
@@ -69,7 +72,7 @@ void displayBoard(const char board[9]) {
     std::cout << std::endl;
 }
 
-void handleSessionAccess(const char* buffer) {
+void handleSessionAccess(const char* buffer, SOCKET sock) {
     int sessionNumber = buffer[0];
     int enemyNameLength = buffer[1];
     std::string enemyName(buffer + 2, buffer + 2 + enemyNameLength);
@@ -80,6 +83,7 @@ void handleSessionAccess(const char* buffer) {
     }
 
     bool isPlayersTurn = buffer[2 + enemyNameLength + 9];
+    myTurn = isPlayersTurn;
 
     clearScreen();
     std::cout << "Session Number: " << sessionNumber << std::endl;
@@ -172,7 +176,10 @@ void handleServerResponse(SOCKET sock) {
         case 109: // Update Session
         case 110: // Game Over
         case 111: // Draw
-            handleSessionAccess(recvBuffer + 5);
+            lastBuffer.resize(bytesReceived); // Resize vector to hold the received data
+            std::memcpy(lastBuffer.data(), recvBuffer, bytesReceived);
+
+            handleSessionAccess(recvBuffer + 5, sock);
             if (messageCode == 110) {
                 std::cout << "Game Over! You " << (recvBuffer[2 + recvBuffer[1] + 9] == 1 ? "won!" : "lost!") << std::endl;
                 currentSession = -1;
@@ -214,9 +221,6 @@ void handleMakeMove(SOCKET sock) {
     message[9] = move;  // Move coordinate
 
     send(sock, message.data(), static_cast<int>(message.size()), 0);
-
-    // Wait for server response to update the board after the move
-    handleServerResponse(sock);
 }
 
 
@@ -225,288 +229,308 @@ void handleClient(SOCKET sock) {
     std::string input;
 
     do {
-        printMenu();
-        std::cout << "Enter your choice: ";
-        std::getline(std::cin, input);
-
-        try {
-            choice = std::stoi(input);
-        }
-        catch (const std::exception&) {
-            choice = -1;  // Invalid input
-        }
 
         bool invalidInput = false;
 
-        switch (choice) {
-        case 1:  // Register
-            if (!loggedIn) {
-                std::cout << "Enter name: ";
-                std::getline(std::cin, playerName);
-                std::string password;
-                std::cout << "Enter password (max 255 chars, no spaces): ";
-                std::getline(std::cin, password);
+        if (currentSession == -1)
+        {
+            printMenu();
+            std::cout << "Enter your choice: ";
+            std::getline(std::cin, input);
 
-                if (password.empty() || password.find(' ') != std::string::npos || playerName.empty()) {
+            try {
+                choice = std::stoi(input);
+            }
+            catch (const std::exception&) {
+                choice = -1;  // Invalid input
+            }
+
+            switch (choice) {
+            case 1:  // Register
+                if (!loggedIn) {
+                    std::cout << "Enter name: ";
+                    std::getline(std::cin, playerName);
+                    std::string password;
+                    std::cout << "Enter password (max 255 chars, no spaces): ";
+                    std::getline(std::cin, password);
+
+                    if (password.empty() || password.find(' ') != std::string::npos || playerName.empty()) {
+                        clearScreen();
+                        std::cout << "Invalid input! Password and name cannot be empty or contain spaces.\n";
+                        invalidInput = true;
+                        break;
+                    }
+
+                    int nameLength = static_cast<int>(playerName.size());
+                    int passwordLength = static_cast<int>(password.size());
+                    char buffer[512] = { 0 };
+                    *(int*)buffer = 1 + 1 + nameLength + 1 + passwordLength;
+                    buffer[4] = 1;
+                    buffer[5] = static_cast<char>(nameLength);
+                    memcpy(buffer + 6, playerName.c_str(), nameLength);
+                    buffer[6 + nameLength] = static_cast<char>(passwordLength);
+                    memcpy(buffer + 7 + nameLength, password.c_str(), passwordLength);
+                    send(sock, buffer, 7 + nameLength + passwordLength, 0);
+                }
+                if (loggedIn)
+                {
                     clearScreen();
-                    std::cout << "Invalid input! Password and name cannot be empty or contain spaces.\n";
-                    invalidInput = true;
-                    break;
+                    std::cout << "Invalid option, please try again.\n";
+                    continue;
+                }
+                break;
+
+            case 2:  // Login
+                if (!loggedIn) {
+                    std::cout << "Enter name: ";
+                    std::getline(std::cin, playerName);
+                    std::string password;
+                    std::cout << "Enter password: ";
+                    std::getline(std::cin, password);
+
+                    if (playerName.empty() || password.empty()) {
+                        clearScreen();
+                        std::cout << "Name and password cannot be empty.\n";
+                        invalidInput = true;
+                        break;
+                    }
+
+                    int nameLength = static_cast<int>(playerName.size());
+                    int passwordLength = static_cast<int>(password.size());
+                    char buffer[512] = { 0 };
+                    *(int*)buffer = 1 + 1 + nameLength + 1 + passwordLength;
+                    buffer[4] = 3;
+                    buffer[5] = static_cast<char>(nameLength);
+                    memcpy(buffer + 6, playerName.c_str(), nameLength);
+                    buffer[6 + nameLength] = static_cast<char>(passwordLength);
+                    memcpy(buffer + 7 + nameLength, password.c_str(), passwordLength);
+                    send(sock, buffer, 7 + nameLength + passwordLength, 0);
+                }
+                if (loggedIn)
+                {
+                    clearScreen();
+                    std::cout << "Invalid option, please try again.\n";
+                    continue;
+                }
+                break;
+
+            case 3:  // Request session list
+                if (loggedIn) {
+                    requestSessionList(sock);
+                    std::cout << "Press Enter to continue...";
+                    std::cin.ignore((std::numeric_limits<std::streamsize>::max)(), '\n');
+                    clearScreen();  // Clear the screen after user presses Enter
+                    continue;  // Skip the rest of the loop and start again from the top
+                }
+                if (!loggedIn)
+                {
+                    clearScreen();
+                    std::cout << "Invalid option, please try again.\n";
+                    continue;
+                }
+                break;
+
+            case 4:  // Create session
+                if (loggedIn) {
+                    std::string sessionPassword;
+                    std::cout << "Enter session password (leave empty if no password, max 255 chars, no spaces): ";
+                    std::getline(std::cin, sessionPassword);
+
+                    if (sessionPassword.find(' ') != std::string::npos) {
+                        clearScreen();
+                        std::cout << "Invalid input! Password cannot contain spaces.\n";
+                        invalidInput = true;
+                        break;
+                    }
+
+                    int passwordLength = static_cast<int>(sessionPassword.size());
+
+                    if (passwordLength > 255) {
+                        clearScreen();
+                        std::cout << "Password is too long (max 255 characters).\n";
+                        invalidInput = true;
+                        break;
+                    }
+
+                    char buffer[512] = { 0 };
+                    *(int*)buffer = 1 + 1 + passwordLength;
+                    buffer[4] = 5;
+                    buffer[5] = static_cast<char>(passwordLength);
+                    memcpy(buffer + 6, sessionPassword.c_str(), passwordLength);
+                    send(sock, buffer, 6 + passwordLength, 0);
+                }
+                if (!loggedIn)
+                {
+                    clearScreen();
+                    std::cout << "Invalid option, please try again.\n";
+                    continue;
+                }
+                break;
+
+            case 5:  // Join session
+                if (loggedIn) {
+                    std::string sessionNumberInput;
+                    std::cout << "Enter session number: ";
+                    std::getline(std::cin, sessionNumberInput);
+
+                    int sessionNumber;
+                    try {
+                        sessionNumber = std::stoi(sessionNumberInput);
+                    }
+                    catch (const std::exception&) {
+                        clearScreen();
+                        std::cout << "Invalid session number.\n";
+                        invalidInput = true;
+                        continue;
+                    }
+
+                    std::string sessionPassword;
+                    clearScreen();
+                    std::cout << "Enter session password (if required): ";
+                    std::getline(std::cin, sessionPassword);
+
+                    if (sessionPassword.find(' ') != std::string::npos) {
+                        clearScreen();
+                        std::cout << "Invalid input! Password cannot contain spaces.\n";
+                        invalidInput = true;
+                        break;
+                    }
+
+                    int passwordLength = static_cast<int>(sessionPassword.size());
+
+                    char buffer[512] = { 0 };
+                    *(int*)buffer = 1 + 1 + 1 + passwordLength;
+                    buffer[4] = 6;
+                    buffer[5] = static_cast<char>(sessionNumber);
+                    buffer[6] = static_cast<char>(passwordLength);
+                    memcpy(buffer + 7, sessionPassword.c_str(), passwordLength);
+                    send(sock, buffer, 7 + passwordLength, 0);
+                }
+                if (!loggedIn)
+                {
+                    clearScreen();
+                    std::cout << "Invalid option, please try again.\n";
+                    continue;
+                }
+                break;
+
+            case 6:  // Logout
+                if (loggedIn) {
+                    char buffer[5] = { 0 };
+                    *(int*)buffer = 1;
+                    buffer[4] = 4;  // Logout message code
+                    send(sock, buffer, 5, 0);
+
+                    // Warte auf die Server-Antwort
+                    char response[512];
+                    int bytesReceived = recv(sock, response, sizeof(response), 0);
+                    if (bytesReceived > 0 && response[4] == 104) {  // 104 ist der Logout-Bestätigungscode
+                        loggedIn = false;
+                        sessionList.clear();  // Sitzungsliste leeren
+                        currentSession = -1;  // Setze die aktuelle Sitzung zurück
+                        clearScreen();
+                        std::cout << "Logged out successfully.\n";
+                        continue;
+                    }
+                    else {
+                        clearScreen();
+                        std::cout << "Logout failed.\n";
+                    }
+                }
+                if (!loggedIn)
+                {
+                    clearScreen();
+                    std::cout << "Invalid option, please try again.\n";
+                    continue;
                 }
 
-                int nameLength = static_cast<int>(playerName.size());
-                int passwordLength = static_cast<int>(password.size());
-                char buffer[512] = { 0 };
-                *(int*)buffer = 1 + 1 + nameLength + 1 + passwordLength;
-                buffer[4] = 1;
-                buffer[5] = static_cast<char>(nameLength);
-                memcpy(buffer + 6, playerName.c_str(), nameLength);
-                buffer[6 + nameLength] = static_cast<char>(passwordLength);
-                memcpy(buffer + 7 + nameLength, password.c_str(), passwordLength);
-                send(sock, buffer, 7 + nameLength + passwordLength, 0);
-            }
-            if (loggedIn)
-            {
-                clearScreen();
-                std::cout << "Invalid option, please try again.\n";
-                continue;
-            }
-            break;
+                // Zeige nach dem Logout wieder das Hauptmenü an
+                break;  // Zurück zur Hauptschleife (do-while), um das Menü erneut anzuzeigen
 
-        case 2:  // Login
-            if (!loggedIn) {
-                std::cout << "Enter name: ";
-                std::getline(std::cin, playerName);
-                std::string password;
-                std::cout << "Enter password: ";
-                std::getline(std::cin, password);
 
-                if (playerName.empty() || password.empty()) {
+            /*case 7:  // Make move
+                if (loggedIn) {
+                    handleMakeMove(sock);
+                }
+                if (!loggedIn)
+                {
                     clearScreen();
-                    std::cout << "Name and password cannot be empty.\n";
-                    invalidInput = true;
-                    break;
+                    std::cout << "Invalid option, please try again.\n";
+                    continue;
+                }
+                break;*/
+
+            case 0:  // Exit
+                if (loggedIn) {
+                    // Führe Logout durch
+                    char buffer[5] = { 0 };
+                    *(int*)buffer = 1;
+                    buffer[4] = 4;  // Logout message code
+                    send(sock, buffer, 5, 0);
+
+                    // Warte auf die Server-Antwort, um das Logout zu bestätigen
+                    char response[512];
+                    int bytesReceived = recv(sock, response, sizeof(response), 0);
+                    if (bytesReceived > 0 && response[4] == 104) {  // 104 ist der Logout-Bestätigungscode
+                        clearScreen();
+                        std::cout << "Logged out successfully.\n";
+                    }
+                    else {
+                        clearScreen();
+                        std::cout << "Logout failed.\n";
+                    }
                 }
 
-                int nameLength = static_cast<int>(playerName.size());
-                int passwordLength = static_cast<int>(password.size());
-                char buffer[512] = { 0 };
-                *(int*)buffer = 1 + 1 + nameLength + 1 + passwordLength;
-                buffer[4] = 3;
-                buffer[5] = static_cast<char>(nameLength);
-                memcpy(buffer + 6, playerName.c_str(), nameLength);
-                buffer[6 + nameLength] = static_cast<char>(passwordLength);
-                memcpy(buffer + 7 + nameLength, password.c_str(), passwordLength);
-                send(sock, buffer, 7 + nameLength + passwordLength, 0);
-            }
-            if (loggedIn)
-            {
+                // Schließe die Socket-Verbindung
+                closesocket(sock);
+                WSACleanup();  // Windows-spezifische Netzwerkschicht aufräumen
+
+                std::cout << "Exiting...\n";
+                FreeConsole();
+                exit(0);  // Beendet das Programm
+
+
+
+            default:
                 clearScreen();
                 std::cout << "Invalid option, please try again.\n";
-                continue;
+                invalidInput = true;
             }
-            break;
 
-        case 3:  // Request session list
-            if (loggedIn) {
-                requestSessionList(sock);
+            if (!invalidInput) {
+                // Check for server messages after each action
+                handleServerResponse(sock);
+
+                /*if (choice != 0) {
+                    // Clear the screen and wait for user input before showing the menu again
+                    clearScreen();
+                    std::cout << "Press Enter to continue...";
+                    std::cin.ignore((std::numeric_limits<std::streamsize>::max)(), '\n');
+                }*/
+            }
+            else {
+                // If there was an invalid input, wait for user acknowledgment before redisplaying the menu
+                clearScreen();
                 std::cout << "Press Enter to continue...";
                 std::cin.ignore((std::numeric_limits<std::streamsize>::max)(), '\n');
-                clearScreen();  // Clear the screen after user presses Enter
-                continue;  // Skip the rest of the loop and start again from the top
             }
-            if (!loggedIn)
+        }
+        else
+        {
+            if (lastBuffer != evenLasterBuffer)
             {
-                clearScreen();
-                std::cout << "Invalid option, please try again.\n";
-                continue;
+                handleSessionAccess(lastBuffer.data(), sock);
             }
-            break;
 
-        case 4:  // Create session
-            if (loggedIn) {
-                std::string sessionPassword;
-                std::cout << "Enter session password (leave empty if no password, max 255 chars, no spaces): ";
-                std::getline(std::cin, sessionPassword);
-
-                if (sessionPassword.find(' ') != std::string::npos) {
-                    clearScreen();
-                    std::cout << "Invalid input! Password cannot contain spaces.\n";
-                    invalidInput = true;
-                    break;
-                }
-
-                int passwordLength = static_cast<int>(sessionPassword.size());
-
-                if (passwordLength > 255) {
-                    clearScreen();
-                    std::cout << "Password is too long (max 255 characters).\n";
-                    invalidInput = true;
-                    break;
-                }
-
-                char buffer[512] = { 0 };
-                *(int*)buffer = 1 + 1 + passwordLength;
-                buffer[4] = 5;
-                buffer[5] = static_cast<char>(passwordLength);
-                memcpy(buffer + 6, sessionPassword.c_str(), passwordLength);
-                send(sock, buffer, 6 + passwordLength, 0);
-            }
-            if (!loggedIn)
+            if (myTurn)
             {
-                clearScreen();
-                std::cout << "Invalid option, please try again.\n";
-                continue;
-            }
-            break;
-
-        case 5:  // Join session
-            if (loggedIn) {
-                std::string sessionNumberInput;
-                std::cout << "Enter session number: ";
-                std::getline(std::cin, sessionNumberInput);
-
-                int sessionNumber;
-                try {
-                    sessionNumber = std::stoi(sessionNumberInput);
-                }
-                catch (const std::exception&) {
-                    clearScreen();
-                    std::cout << "Invalid session number.\n";
-                    invalidInput = true;
-                    continue;
-                }
-
-                std::string sessionPassword;
-                clearScreen();
-                std::cout << "Enter session password (if required): ";
-                std::getline(std::cin, sessionPassword);
-
-                if (sessionPassword.find(' ') != std::string::npos) {
-                    clearScreen();
-                    std::cout << "Invalid input! Password cannot contain spaces.\n";
-                    invalidInput = true;
-                    break;
-                }
-
-                int passwordLength = static_cast<int>(sessionPassword.size());
-
-                char buffer[512] = { 0 };
-                *(int*)buffer = 1 + 1 + 1 + passwordLength;
-                buffer[4] = 6;
-                buffer[5] = static_cast<char>(sessionNumber);
-                buffer[6] = static_cast<char>(passwordLength);
-                memcpy(buffer + 7, sessionPassword.c_str(), passwordLength);
-                send(sock, buffer, 7 + passwordLength, 0);
-            }
-            if (!loggedIn)
-            {
-                clearScreen();
-                std::cout << "Invalid option, please try again.\n";
-                continue;
-            }
-            break;
-
-        case 6:  // Logout
-            if (loggedIn) {
-                char buffer[5] = { 0 };
-                *(int*)buffer = 1;
-                buffer[4] = 4;  // Logout message code
-                send(sock, buffer, 5, 0);
-
-                // Warte auf die Server-Antwort
-                char response[512];
-                int bytesReceived = recv(sock, response, sizeof(response), 0);
-                if (bytesReceived > 0 && response[4] == 104) {  // 104 ist der Logout-Bestätigungscode
-                    loggedIn = false;
-                    sessionList.clear();  // Sitzungsliste leeren
-                    currentSession = -1;  // Setze die aktuelle Sitzung zurück
-                    clearScreen();
-                    std::cout << "Logged out successfully.\n";
-                    continue;
-                }
-                else {
-                    clearScreen();
-                    std::cout << "Logout failed.\n";
-                }
-            }
-            if (!loggedIn)
-            {
-                clearScreen();
-                std::cout << "Invalid option, please try again.\n";
-                continue;
-            }
-
-            // Zeige nach dem Logout wieder das Hauptmenü an
-            break;  // Zurück zur Hauptschleife (do-while), um das Menü erneut anzuzeigen
-
-
-        case 7:  // Make move
-            if (loggedIn) {
                 handleMakeMove(sock);
             }
-            if (!loggedIn)
-            {
-                clearScreen();
-                std::cout << "Invalid option, please try again.\n";
-                continue;
-            }
-            break;
 
-        case 0:  // Exit
-            if (loggedIn) {
-                // Führe Logout durch
-                char buffer[5] = { 0 };
-                *(int*)buffer = 1;
-                buffer[4] = 4;  // Logout message code
-                send(sock, buffer, 5, 0);
-
-                // Warte auf die Server-Antwort, um das Logout zu bestätigen
-                char response[512];
-                int bytesReceived = recv(sock, response, sizeof(response), 0);
-                if (bytesReceived > 0 && response[4] == 104) {  // 104 ist der Logout-Bestätigungscode
-                    clearScreen();
-                    std::cout << "Logged out successfully.\n";
-                }
-                else {
-                    clearScreen();
-                    std::cout << "Logout failed.\n";
-                }
-            }
-
-            // Schließe die Socket-Verbindung
-            closesocket(sock);
-            WSACleanup();  // Windows-spezifische Netzwerkschicht aufräumen
-
-            std::cout << "Exiting...\n";
-            FreeConsole();
-            exit(0);  // Beendet das Programm
-            
-
-
-        default:
-            clearScreen();
-            std::cout << "Invalid option, please try again.\n";
-            invalidInput = true;
-        }
-
-        if (!invalidInput) {
-            // Check for server messages after each action
             handleServerResponse(sock);
+        }
 
-            if (choice != 0) {
-                // Clear the screen and wait for user input before showing the menu again
-                clearScreen();
-                std::cout << "Press Enter to continue...";
-                std::cin.ignore((std::numeric_limits<std::streamsize>::max)(), '\n');
-            }
-        }
-        else {
-            // If there was an invalid input, wait for user acknowledgment before redisplaying the menu
-            clearScreen();
-            std::cout << "Press Enter to continue...";
-            std::cin.ignore((std::numeric_limits<std::streamsize>::max)(), '\n');
-        }
+        lastBuffer = evenLasterBuffer;
 
     } while (true);
 }
