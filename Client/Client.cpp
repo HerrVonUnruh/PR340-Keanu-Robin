@@ -91,12 +91,21 @@ void handleSessionAccess(const char* buffer, SOCKET sock) {
 
     clearScreen();
     std::cout << "Session Number: " << sessionNumber << std::endl;
-    std::cout << "Game against: " << enemyName << std::endl;
+    
+    if (enemyNameLength != 0)
+    {
+        // Display the current board
+        std::cout << "Game against: " << enemyName << std::endl;
+        
+        displayBoard(board.data());
+        
+        std::cout << (isPlayersTurn ? "It's your turn!" : "Waiting for opponent's move...") << std::endl;
+    }
+    else
+    {
+        std::cout << "waiting for opponent ..." << enemyName << std::endl;
+    }
 
-    // Display the current board
-    displayBoard(board.data());
-
-    std::cout << (isPlayersTurn ? "It's your turn!" : "Waiting for opponent's move...") << std::endl;
 
     currentSession = sessionNumber;
     opponentName = enemyName;
@@ -199,14 +208,20 @@ void handleServerResponse(SOCKET sock) {
 
                 handleSessionAccess(recvBuffer + 5, sock);
                 if (messageCode == 110) {
-                    std::cout << "Game Over! You " << (recvBuffer[2 + recvBuffer[1] + 9] == 1 ? "won!" : "lost!") << std::endl;
+                    std::cout << "Game Over! You " << (myTurn ? "lost!" : "won!") << std::endl;
                     currentSession = -1;
                     opponentName = "";
+
+                    std::cout << "\n";
+                    std::cin.ignore((std::numeric_limits<std::streamsize>::max)(), '\n');
                 }
                 else if (messageCode == 111) {
                     std::cout << "Game Over! It's a draw!" << std::endl;
                     currentSession = -1;
                     opponentName = "";
+
+                    std::cout << "\n";
+                    std::cin.ignore((std::numeric_limits<std::streamsize>::max)(), '\n');
                 }
                 break;
             case 112: // Session Access Denied
@@ -524,7 +539,7 @@ void handleClient(SOCKET sock) {
 
 
             default:
-                clearScreen();
+                //clearScreen();
                 std::cout << "Invalid option, please try again.\n";
                 invalidInput = true;
             }
@@ -542,7 +557,7 @@ void handleClient(SOCKET sock) {
             }
             else {
                 // If there was an invalid input, wait for user acknowledgment before redisplaying the menu
-                clearScreen();
+                //clearScreen();
                 std::cout << "Press Enter to continue...";
                 std::cin.ignore((std::numeric_limits<std::streamsize>::max)(), '\n');
             }
