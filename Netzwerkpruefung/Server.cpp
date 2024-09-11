@@ -414,6 +414,7 @@ int main() {
                 int bytesReceived = recv(sock, buf, BUFFER_SIZE, 0);
 
                 if (bytesReceived <= 0) {
+                    handleLogout(sock);
                     closesocket(sock);
                     FD_CLR(sock, &master);
                     clientBuffers.erase(sock);
