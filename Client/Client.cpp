@@ -193,7 +193,13 @@ void handleServerResponse(SOCKET sock) {
             case 101: // Erfolgreiche Registrierung
             case 104: // Erfolgreicher Login
                 loggedIn = true;
+                clearScreen();
                 std::cout << "Login successful!" << std::endl;
+                break;
+            case 105: // Fehlgeschlagener Login
+                loggedIn = false;
+                clearScreen();
+                std::cout << "Login failed!" << std::endl;
                 break;
             case 103: // Session List
                 offset = 5;  // Initialisierung innerhalb des case
@@ -238,6 +244,7 @@ void handleServerResponse(SOCKET sock) {
                 }
                 break;
             case 112: // Session Access Denied
+                clearScreen();
                 std::cout << "Error: Unable to access session." << std::endl;
                 break;
             }
@@ -247,6 +254,7 @@ void handleServerResponse(SOCKET sock) {
 
 void handleMakeMove(SOCKET sock) {
     if (currentSession == -1) {
+        clearScreen();
         std::cout << "You are not in a session. Join a session first." << std::endl;
 
         // Recalling the menu so the user can choose another action
@@ -552,7 +560,7 @@ void handleClient(SOCKET sock) {
 
 
             default:
-                //clearScreen();
+                clearScreen();
                 std::cout << "Invalid option, please try again.\n";
                 invalidInput = true;
             }
