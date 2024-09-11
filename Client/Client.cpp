@@ -21,7 +21,7 @@ std::vector<char> lastBuffer;
 std::vector<char> evenLasterBuffer;
 bool myTurn = false;
 std::string opponentName;
-
+bool isX = false;
 
 // Function declarations
 void clearScreen();
@@ -96,7 +96,18 @@ void handleSessionAccess(const char* buffer, SOCKET sock) {
     {
         // Display the current board
         std::cout << "Game against: " << enemyName << std::endl;
-        
+
+        if (isX)
+        {
+            std::cout << "You are: X"<< std::endl;
+        }
+        else
+        {
+            std::cout << "You are: O" << std::endl;
+        }
+
+        std::cout << "\n";
+
         displayBoard(board.data());
         
         std::cout << (isPlayersTurn ? "It's your turn!" : "Waiting for opponent's move...") << std::endl;
@@ -104,8 +115,8 @@ void handleSessionAccess(const char* buffer, SOCKET sock) {
     else
     {
         std::cout << "waiting for opponent ..." << enemyName << std::endl;
+        isX = true;
     }
-
 
     currentSession = sessionNumber;
     opponentName = enemyName;
@@ -211,6 +222,7 @@ void handleServerResponse(SOCKET sock) {
                     std::cout << "Game Over! You " << (myTurn ? "lost!" : "won!") << std::endl;
                     currentSession = -1;
                     opponentName = "";
+                    isX = false;
 
                     std::cout << "\n";
                     std::cin.ignore((std::numeric_limits<std::streamsize>::max)(), '\n');
@@ -219,6 +231,7 @@ void handleServerResponse(SOCKET sock) {
                     std::cout << "Game Over! It's a draw!" << std::endl;
                     currentSession = -1;
                     opponentName = "";
+                    isX = false;
 
                     std::cout << "\n";
                     std::cin.ignore((std::numeric_limits<std::streamsize>::max)(), '\n');
