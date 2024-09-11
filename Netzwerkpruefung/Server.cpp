@@ -129,20 +129,77 @@ void handleLogin(SOCKET clientSocket, const std::vector<char>& message) {
     }
 }
 
+void sendGameState(const Session& session, char messageCode) {
+    std::vector<char> stateData(14 + session.player2.size(), 0);
+    stateData[0] = static_cast<char>(session.sessionNumber);
+    stateData[1] = static_cast<char>(session.player2.size());
+    std::copy(session.player2.begin(), session.player2.end(), stateData.begin() + 2);
+    std::copy(std::begin(session.board), std::end(session.board), stateData.begin() + 2 + session.player2.size());
+    stateData[2 + session.player2.size() + 9] = session.isPlayer1Turn ? 1 : 0;
+
+    for (const auto& pair : registeredUsers) {
+        if (pair.second.name == session.player1) {
+            sendMessage(pair.second.socket, messageCode, stateData);
+            break;
+        }
+    }
+
+    stateData[1] = static_cast<char>(session.player1.size());
+    std::copy(session.player1.begin(), session.player1.end(), stateData.begin() + 2);
+    stateData[2 + session.player1.size() + 9] = session.isPlayer1Turn ? 0 : 1;
+
+    for (const auto& pair : registeredUsers) {
+        if (pair.second.name == session.player2) {
+            sendMessage(pair.second.socket, messageCode, stateData);
+            break;
+        }
+    }
+}
+
 void handleLogout(SOCKET clientSocket) {
+    std::string logoutUserName;
     for (auto& pair : registeredUsers) {
         User& user = pair.second;
         if (user.socket == clientSocket && user.loggedIn) {
+            logoutUserName = user.name;
             user.loggedIn = false;
             user.currentSession = -1;
-            std::cout << "[INFO] User " << user.name << " logged out successfully." << std::endl;
-            sendMessage(clientSocket, 104);
-            return;
+            break;
         }
     }
-    std::cout << "[ERROR] Logout failed: user not found or already logged out." << std::endl;
-}
 
+    if (logoutUserName.empty()) {
+        std::cout << "[ERROR] Logout failed: user not found or already logged out." << std::endl;
+        return;
+    }
+
+    // Check all active sessions
+    for (auto it = activeSessions.begin(); it != activeSessions.end();) {
+        Session& session = it->second;
+        if (session.player1 == logoutUserName || session.player2 == logoutUserName) {
+            std::string winnerName = (session.player1 == logoutUserName) ? session.player2 : session.player1;
+
+            // Notify the other player about the win
+            for (const auto& userPair : registeredUsers) {
+                if (userPair.second.name == winnerName && userPair.second.loggedIn) {
+                    session.isPlayer1Turn = (session.player1 == logoutUserName);
+                    sendGameState(session, 110);  // Game over
+                    std::cout << "[INFO] Player " << winnerName << " wins in session " << session.sessionNumber << " due to " << logoutUserName << " logout." << std::endl;
+                    break;
+                }
+            }
+
+            // Remove the session
+            it = activeSessions.erase(it);
+        }
+        else {
+            ++it;
+        }
+    }
+
+    std::cout << "[INFO] User " << logoutUserName << " logged out successfully." << std::endl;
+    sendMessage(clientSocket, 104);  // 104 is the successful logout message code
+}
 void handleSessionListRequest(SOCKET clientSocket) {
     std::vector<char> sessionListData;
     for (const auto& session : activeSessions) {
@@ -301,32 +358,6 @@ bool checkDraw(const char* board) {
     return std::all_of(board, board + 9, [](char c) { return c != 0; });
 }
 
-void sendGameState(const Session& session, char messageCode) {
-    std::vector<char> stateData(14 + session.player2.size(), 0);
-    stateData[0] = static_cast<char>(session.sessionNumber);
-    stateData[1] = static_cast<char>(session.player2.size());
-    std::copy(session.player2.begin(), session.player2.end(), stateData.begin() + 2);
-    std::copy(std::begin(session.board), std::end(session.board), stateData.begin() + 2 + session.player2.size());
-    stateData[2 + session.player2.size() + 9] = session.isPlayer1Turn ? 1 : 0;
-
-    for (const auto& pair : registeredUsers) {
-        if (pair.second.name == session.player1) {
-            sendMessage(pair.second.socket, messageCode, stateData);
-            break;
-        }
-    }
-
-    stateData[1] = static_cast<char>(session.player1.size());
-    std::copy(session.player1.begin(), session.player1.end(), stateData.begin() + 2);
-    stateData[2 + session.player1.size() + 9] = session.isPlayer1Turn ? 0 : 1;
-
-    for (const auto& pair : registeredUsers) {
-        if (pair.second.name == session.player2) {
-            sendMessage(pair.second.socket, messageCode, stateData);
-            break;
-        }
-    }
-}
 
 void handleMakeMove(SOCKET clientSocket, const std::vector<char>& message) {
     int sessionNumber = *(int*)(message.data() + 5);
