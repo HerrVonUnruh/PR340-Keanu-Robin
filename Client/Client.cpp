@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <limits>
 #include <windows.h>
+#include <stdlib.h>
+#include <conio.h>
 #pragma comment(lib, "ws2_32.lib")
 
 // Global variables
@@ -147,13 +149,21 @@ void displaySessionList(const char* data, int length) {
     }
 }
 
+void clearInputBuffer() {
+    while (_kbhit()) {  // _kbhit() checks if a key is in the buffer
+        _getch();       // _getch() reads the key and removes it from the buffer
+    }
+}
 
 void handleServerResponse(SOCKET sock) {
     char recvBuffer[512];
     bool gotData = false;
 
+    clearInputBuffer();
+    
     while (!gotData)
     {
+
         int bytesReceived = recv(sock, recvBuffer, 512, 0);
         if (bytesReceived > 0) {
             gotData = true;
@@ -508,7 +518,7 @@ void handleClient(SOCKET sock) {
                 WSACleanup();  // Windows-spezifische Netzwerkschicht aufräumen
 
                 std::cout << "Exiting...\n";
-                FreeConsole();
+                //FreeConsole();
                 exit(0);  // Beendet das Programm
 
 
